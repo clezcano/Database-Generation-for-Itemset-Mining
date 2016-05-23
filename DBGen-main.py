@@ -3,4 +3,4 @@ with open(r'C:\Users\SF\Desktop\groceries.csv', 'r') as file:
     #print(len(file.readlines()))
     print((file.readlines()))
     #hola1
-    #testing 
+    #testing
