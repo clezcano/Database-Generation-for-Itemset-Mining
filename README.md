@@ -1,3 +1,3 @@
 # DBGen
 Database Generation for itemset mining
-Author:
+Author: Ganesh Ramesh
