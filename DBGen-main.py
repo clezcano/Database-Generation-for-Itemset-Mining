@@ -3,7 +3,6 @@ filein = 'groceries.csv'
 #list = []
 with open(filein, 'r') as f:
     w = csv.reader(f, delimiter=',')
-    rownum = 0
     for i, row in enumerate(w, start=1):
         print("#",i, ": ", end='')
         for col in row:
