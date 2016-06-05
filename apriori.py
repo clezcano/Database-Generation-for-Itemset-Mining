@@ -23,8 +23,11 @@ def aprioriexe():
         targetype = "-tm"
         cmd = algorithm + " " + itemsepin + " " + itemsepout + " " + minsup + " " + targetype + " " + apriorifile + " " + maximalout
         print("command: ", cmd)
-        list = check_output(cmd, shell=True).decode("utf-8").split("\n")
-        for i,a in enumerate(list):
+        list = check_output(cmd, shell=True).decode("utf-8").strip().split("\n")
+        for i,a in enumerate(list, start=1):
             print(i,":",a)
         print("output: ",len(list))
+        for i, a in enumerate(list, start=1):
+                print(i, ":", a.split("(")[0])
+        print(list[-1].split("(")[0])
 
