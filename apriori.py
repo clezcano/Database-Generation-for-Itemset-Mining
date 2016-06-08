@@ -1,33 +1,24 @@
-from asyncio.subprocess import PIPE
-
-
 def aprioriexe():
 
-        from subprocess import call, check_output, Popen
+        from subprocess import check_output
 
         algorithm = "apriori.exe"
         itemsepin = "-f,"  # input item separator
         itemsepout = "-k,"  # output item separator
+        minsuplist = [0.5, 1, 1.5]
         minsup = "-s2"  # minimun support, positive in percentage, negative in absolutes
-        targetype = "-ts"  # frequest (s) maximal (m) closed (c)
+
+        targetype = "-tm"  # frequest (s) maximal (m) closed (c)
         apriorifile = "groceries.csv"
-        frequentout = "frequentout.csv"
-        #maximalout = "maximalout.csv"
         maximalout = "-"
 
+        for support in minsuplist:
+                minsup += support
+                cmd = algorithm + " " + itemsepin + " " + itemsepout + " " + minsup + " " + targetype + " " + apriorifile + " " + maximalout
+                print("command for maximal: ", cmd)
 
-        cmd = algorithm + " " + itemsepin + " " + itemsepout + " " + minsup + " " + targetype + " " + apriorifile + " " + frequentout
-        #print("command: ", cmd)
-        #call(cmd, shell=True)
-
-        targetype = "-tm"
-        cmd = algorithm + " " + itemsepin + " " + itemsepout + " " + minsup + " " + targetype + " " + apriorifile + " " + maximalout
-        print("command: ", cmd)
-        list = check_output(cmd, shell=True).decode("utf-8").strip().split("\n")
-        for i,a in enumerate(list, start=1):
-            print(i,":",a)
-        print("output: ",len(list))
-        for i, a in enumerate(list, start=1):
-                print(i, ":", a.split("(")[0])
-        print(list[-1].split("(")[0])
-
+                maximalist = check_output(cmd, shell=True).decode("utf-8").strip().split("\n")
+                maximalinput = []
+                for a in maximalist:
+                    maximalinput.append(a.split("(")[0])
+                [print(i, ": ", elem) for i, elem in enumerate(maximalinput, start=1)]
