@@ -13,12 +13,12 @@ def aprioriexe():
         maximalout = "-"
 
         for support in minsuplist:
-                minsup += support
+                minsup = "-s" + str(support)
                 cmd = algorithm + " " + itemsepin + " " + itemsepout + " " + minsup + " " + targetype + " " + apriorifile + " " + maximalout
                 print("command for maximal: ", cmd)
 
                 maximalist = check_output(cmd, shell=True).decode("utf-8").strip().split("\n")
                 maximalinput = []
-                for a in maximalist:
-                    maximalinput.append(a.split("(")[0])
+                for itemset in maximalist:
+                    maximalinput.append(itemset.split("(")[0])
                 [print(i, ": ", elem) for i, elem in enumerate(maximalinput, start=1)]
