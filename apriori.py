@@ -1,24 +1,17 @@
-def aprioriexe():
+from subprocess import check_output
 
-        from subprocess import check_output
+def aprioriexe(input_item_delimeter, output_item_delimeter, minimum_support_list, targetype, inputfile, maximalout):
 
-        algorithm = "apriori.exe"
-        itemsepin = "-f,"  # input item separator
-        itemsepout = "-k,"  # output item separator
-        minsuplist = [0.5, 1, 1.5]
-        minsup = "-s2"  # minimun support, positive in percentage, negative in absolutes
+    for levelsupport in minimum_support_list:
 
-        targetype = "-tm"  # frequest (s) maximal (m) closed (c)
-        apriorifile = "groceries.csv"
-        maximalout = "-"
+           current_minimun_support = "-s" + str(levelsupport).strip()
+           command = "apriori.exe" + " " + input_item_delimeter + " " + output_item_delimeter + " " + current_minimun_support + " " + targetype + " " + inputfile + " " + maximalout
+           print("command for maximal: ", command)
 
-        for support in minsuplist:
-                minsup = "-s" + str(support)
-                cmd = algorithm + " " + itemsepin + " " + itemsepout + " " + minsup + " " + targetype + " " + apriorifile + " " + maximalout
-                print("command for maximal: ", cmd)
-
-                maximalist = check_output(cmd, shell=True).decode("utf-8").strip().split("\n")
-                maximalinput = []
-                for itemset in maximalist:
-                    maximalinput.append(itemset.split("(")[0])
-                [print(i, ": ", elem) for i, elem in enumerate(maximalinput, start=1)]
+           maximal_input = []
+           maximal_list = check_output(command, shell=True).decode("utf-8").strip().split("\n")
+           print("maximal list: ")
+           print(maximal_list)
+           for itemset in maximal_list:
+                   maximal_input.append(itemset.split("(")[0])
+           [print(i, ": ", elem) for i, elem in enumerate(maximal_input, start=1)]

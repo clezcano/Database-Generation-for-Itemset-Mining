@@ -24,7 +24,7 @@ class hypergraph:
     def __init__(self, c=set([]), l = []):
         "initialization; default: empty carrier, empty list of hyperedges"
         self.carrier = c.copy()
-        self.hyedges = [ e.copy() for e in l ]
+        self.hyedges = [e.copy() for e in l]
         
     def addel(self,elem):
         "add one element to all the hyperedges"
@@ -96,7 +96,7 @@ class hypergraph:
 
         self.updatecarrier()
         
-        if len(self.hyedges)==0:
+        if len(self.hyedges) == 0:
             if currtrs.somempty():
                 return False
             else:
@@ -165,18 +165,20 @@ if __name__ == "__main__":
 
 #    small tests
 
-    h.added(set(['A']))
-    h.added(set(['B']))
-
-    h.added(set(['A','B']))
-    h.added(set(['B','C']))
-    h.added(set(['B','D']))
-    h.added(set(['C','D']))
-
-    h.added(set(['A','B','C']))
-    h.added(set(['B','C','D']))
-
-    print("h has 8 hyedges on A, B, C, D")
+    # h.added(set(['A']))
+    # h.added(set(['B']))
+    #
+    # h.added(set(['A','B']))
+    # h.added(set(['B','C']))
+    # h.added(set(['B','D']))
+    # h.added(set(['C','D']))
+    #
+    # h.added(set(['A','B','C']))
+    # h.added(set(['B','C','D']))
+    h.added(set(['1', '2', '4', '5']))
+    h.added(set(['1', '2', '3', '5']))
+    # print("h has 8 hyedges on A, B, C, D")
+    print("h has 2 hyedges on 1, 2, 3, 4, 5")
     print(h.carrier)
     print(h.hyedges)
 
@@ -186,12 +188,13 @@ if __name__ == "__main__":
 ##    hhh = hypergraph()
 ##    h.xcopy(hhh)
 
-    h.added(set(['A','D']))
+    # h.added(set(['A','D']))
 
     h.simplify()
 #    h.simplify({'A':['B','C']})
 
-    print("h modified: added AD and simplified:")
+    # print("h modified: added AD and simplified:")
+    print("h modified: simplified:")
     print(h.carrier)
     print(h.hyedges)
 
