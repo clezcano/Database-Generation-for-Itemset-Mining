@@ -6,7 +6,7 @@ def main():
 
         input_item_delimeter = "-f,"
         output_item_delimeter = "-k,"
-        minimum_support_list = [0.5, 1, 1.5] # positive: percentage of transactions, negative: exact number of transactions
+        minimum_support_list = [0.5, -1, 1.5] # positive: percentage of transactions, negative: exact number of transactions
         targetype = "-tm"  # frequest (s) maximal (m) closed (c)
         inputfile = "groceries.csv"
         maximalout = "-" # "-" for standard output
