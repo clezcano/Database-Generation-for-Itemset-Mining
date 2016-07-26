@@ -6,13 +6,14 @@ def main():
 
         input_item_delimeter = "-f,"
         output_item_delimeter = "-k,"
-        minimum_support_list = [0.5, -1, 1.5] # positive: percentage of transactions, negative: exact number of transactions
+        minimum_support_list = [5.5, -1, 10.5] # positive: percentage of transactions, negative: exact number of transactions
         targetype = "-tm"  # frequest (s) maximal (m) closed (c)
-        inputfile = "groceries.csv"
+        output_format = '-v" "' # empty support information
+        inputfile = "test.csv" # "groceries.csv"
         maximalout = "-" # "-" for standard output
 
         from apriori import aprioriexe
-        aprioriexe(input_item_delimeter, output_item_delimeter, minimum_support_list, targetype, inputfile, maximalout)
+        aprioriexe(input_item_delimeter, output_item_delimeter, minimum_support_list, targetype, output_format, inputfile, maximalout)
 
 if __name__ == "__main__":
         main()
