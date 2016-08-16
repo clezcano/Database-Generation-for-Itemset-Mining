@@ -8,7 +8,7 @@ class DbGen:
     def __init__(self, input_item_delimeter, output_item_delimeter, minimum_support_list, targetype, output_format, inputfile, maximalout):
 
 
-        
+
     def dbgenbasic(input_item_delimeter, output_item_delimeter, minimum_support_list, targetype, output_format, inputfile, maximalout):
 
         maximal_collection_list = loadmaximalcollections()
@@ -17,7 +17,6 @@ class DbGen:
             dbgenbasic(maximal_collection_list)
         else:
             print("This DB does not satisfy the containment property. Execution stop")
-
 
 
     def dbgenbasic(maximal_collection_list):
