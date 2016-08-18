@@ -1,3 +1,5 @@
+from dbgenlibrary import *
+
 def main():
 
         # apriori parameter settings http://www.borgelt.net/doc/apriori/apriori.html
@@ -12,8 +14,11 @@ def main():
         inputfile = "test.csv" # "groceries.csv"
         maximalout = "-" # "-" for standard output
 
-        from dbgenlibrary import dbgenbasic
-        dbgenbasic(input_item_delimeter, output_item_delimeter, minimum_support_list, targetype, output_format, inputfile, maximalout)
+        var = DbGen(input_item_delimeter, output_item_delimeter, minimum_support_list, targetype, output_format, inputfile, maximalout)
+        var.dbGenBasic()
+        var.getDB()
+        var.getRelMinSupLev()
+
 
 if __name__ == "__main__":
         main()

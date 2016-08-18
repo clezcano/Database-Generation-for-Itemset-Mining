@@ -2,6 +2,30 @@
 
 from subprocess import check_output
 
+class ItemSet:
+
+    def __init__(self):
+        self.itemset = set()
+        self.cardinality = 1
+
+    def add(self, value):
+        self.itemset.add(value)
+
+    def size(self):
+        return len(self.itemset)
+
+
+class MaximalCollection:
+    # Contains a list of itemset
+    def __init__(self):
+        self.maximalCollection = list()
+
+    def append(self, value):
+        self.maximalCollection.append(value)
+
+    def size(self):
+        return len(self.maximalCollection)
+
 class DbGen:
 
     def __init__(self, input_item_delimiter, output_item_delimiter, minimum_support_list, targetype, output_format, inputfile, maximalout):
@@ -13,9 +37,9 @@ class DbGen:
         self.output_format = output_format
         self.inputfile = inputfile
         self.maximalout = maximalout
-        self.maximal_collection_list = [] # list of maximal collections Ex: M1, M2, M3
+        self.maximal_collection_list = list() # list of maximal collections Ex: M1, M2, M3
         self.item_universe = set()
-        self.DB = []
+        self.DB = list()
 
     def dbGenBasic(self):
 
@@ -50,11 +74,11 @@ class DbGen:
 
     def generationOperator(level, absoluteSupLevel):
 
-        return []
+        return list()
 
     def loadMaximalCollections(self):
 
-        self.maximal_collection_list = []
+        self.maximal_collection_list.clear()
         for levelsupport in self.minimum_support_list:
             command = "apriori.exe" + " " + self.input_item_delimiter + " " + self.output_item_delimiter + " " + levelsupport + " " + self.targetype + " " + self.output_format + " " + self.inputfile + " " + self.maximalout
             # print("1. command for maximal: ", command)
@@ -64,14 +88,20 @@ class DbGen:
             maximal_collection = [itemset.strip() for itemset in maximal_temp_collection]  # contains a maximal collection, ex: Mi
             # print("4. Maximal list size: ", len(maximal_collection))
             # print("5. Maximal list: ", maximal_collection)
-            self.maximal_collection_list.append(maximal_collection)
+            mc = MaximalCollection()
+            for i in maximal_collection:
+                itemset = ItemSet()
+                for item in i.split(","):
+                    itemset.add(item)
+                mc.append(itemset)
+            self.maximal_collection_list.append(mc)
 
     def getMaximalCollections(self):
 
         return self.maximal_collection_list
 
     def getItemUniverse(self):
-
+        # builds up the DB of singleton items
         self.item_universe.clear()  # contains the list of all the single items.
         for maximal_collection in self.maximal_collection_list:
             [[self.item_universe.add(item.strip()) for item in itemset.split(",")] for itemset in maximal_collection]  # builds up the DB of singleton items
@@ -80,4 +110,5 @@ class DbGen:
     def getMaxSup(self): # Maximum of the absolute support values of all the singleton items of DB
 
     def satisfyContainmentProp(self): # check if the maximal collections satisfy the containment property. Ex: Mk [ Mk-1 [ ... [ M2 [ M1
+
 
