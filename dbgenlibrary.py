@@ -7,22 +7,21 @@ class ItemSet:
     def __init__(self):
         self.itemset = set()
         self.cardinality = 1
-
     def add(self, value):
         self.itemset.add(value)
-
     def size(self):
         return len(self.itemset)
-
+    def getItemSet(self):
+        return self.itemset
 
 class MaximalCollection:
-    # Contains a list of itemset
+    # Contains a list of itemsets
     def __init__(self):
         self.maximalCollection = list()
-
+    def getMaximalCollection(self):
+        return self.maximalCollection
     def append(self, value):
         self.maximalCollection.append(value)
-
     def size(self):
         return len(self.maximalCollection)
 
@@ -37,7 +36,7 @@ class DbGen:
         self.output_format = output_format
         self.inputfile = inputfile
         self.maximalout = maximalout
-        self.maximal_collection_list = list() # list of maximal collections Ex: M1, M2, M3
+        self.maximal_collection_list = [MaximalCollection() for i in self.minimum_support_list] # list of maximal collections Ex: M1, M2, M3
         self.item_universe = set()
         self.DB = list()
 
@@ -51,7 +50,7 @@ class DbGen:
 
     def runDbGenBasic(self):
 
-         maximalCollectionNumber = len(self.minimum_support_list) # number of maximal collections
+         maximalCollectionNumber = len(self.maximal_collection_list) # number of maximal collections
          step = 1 # current level
          auxDB = []
          absoluteSupLevel = 1 # Absolute support level
@@ -109,6 +108,21 @@ class DbGen:
 
     def getMaxSup(self): # Maximum of the absolute support values of all the singleton items of DB
 
+
     def satisfyContainmentProp(self): # check if the maximal collections satisfy the containment property. Ex: Mk [ Mk-1 [ ... [ M2 [ M1
 
+        i = 0
+        while i < (len(self.maximal_collection_list) - 1):
+           j = i + 1
+           mc1 = self.maximal_collection_list[i].getMaximalCollection() # returns a list of ItemSet
+           mc2 = self.maximal_collection_list[j].getMaximalCollection()
+           for itemset2 in mc2:
+               isSubset = False
+               for itemset1 in mc1:
+                    if set(itemset2).issubset(itemset1):
+                        isSubset = True
+                        break
+               if not isSubset:
+                   return False
+           return True
 
