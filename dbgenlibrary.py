@@ -52,7 +52,7 @@ class DbGen:
 
          maximalCollectionNumber = len(self.maximal_collection_list) # number of maximal collections
          step = 1 # current level
-         auxDB = []
+         auxDB = list()
          absoluteSupLevel = 1 # Absolute support level
          auxDB = self.generationOperator(step, absoluteSupLevel)
          self.DB = auxDB
