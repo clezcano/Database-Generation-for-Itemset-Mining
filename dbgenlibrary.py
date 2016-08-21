@@ -1,6 +1,7 @@
 # Algorithms based on paper "Distribution-Based Synthetic Database Generation Techniques for Itemset Mining" by Ganesh Ramesh, Mohammed J. Zaki and William A. Maniatty
 
 from subprocess import check_output
+from collections import Counter
 
 class ItemSet:
 
@@ -19,7 +20,7 @@ class DataBase:
     # Contains a list of itemsets
     def __init__(self):
         self.database = list()
-        self.item_universe = set()
+        self.itemUniverseSup = Counter()
 
     def getDataBase(self):
         return self.database
@@ -31,16 +32,16 @@ class DataBase:
         return len(self.database)
 
     def getMaxSup(self):  # Maximum of the absolute support values of all the singleton items of DB
-        return 0
+        self.itemUniverseSup.clear()
+        for itemset in self.getDataBase():
+            self.itemUniverseSup.update(itemset.getItemSet())
 
     def appendDB(self, auxDB):
          del auxDB # remember to delete auxDB
 
     def getItemUniverse(self):
         # builds up the DB of singleton items. It contains the list of all the single items.
-        self.item_universe.clear()
-        for row in self.getDataBase():
-            self.item_universe |= row.getItemSet()
+
         print("6. Item universe size: ", len(self.item_universe), "\n7. item universe: ", self.item_universe)
 
 class DbGen:
@@ -95,13 +96,8 @@ class DbGen:
         self.collection_list.clear()
         for levelsupport in self.minimum_support_list:
             command = "apriori.exe" + " " + self.input_item_delimiter + " " + self.output_item_delimiter + " " + levelsupport + " " + self.targetype + " " + self.output_format + " " + self.inputfile + " " + self.maximalout
-            # print("1. command for maximal: ", command)
             temp_collection = check_output(command, shell=True).decode("utf-8").strip().split("\n")  # contains the maximal itemset list with useless space characters
-            # print("2. maximal temp list size: ", len(maximal_temp_collection))
-            # print("3. maximal temp list: ", maximal_temp_collection)
             collection = [itemset.strip() for itemset in temp_collection]  # contains a maximal collection, ex: Mi
-            # print("4. Maximal list size: ", len(maximal_collection))
-            # print("5. Maximal list: ", maximal_collection)
             mc = DataBase()
             for i in collection:
                 itemset = ItemSet()
