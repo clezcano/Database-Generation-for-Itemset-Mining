@@ -35,14 +35,11 @@ class DataBase:
         self.itemUniverseSup.clear()
         for itemset in self.getDataBase():
             self.itemUniverseSup.update(itemset.getItemSet())
+        return max(self.itemUniverseSup.values())
 
     def appendDB(self, auxDB):
-         del auxDB # remember to delete auxDB
-
-    def getItemUniverse(self):
-        # builds up the DB of singleton items. It contains the list of all the single items.
-
-        print("6. Item universe size: ", len(self.item_universe), "\n7. item universe: ", self.item_universe)
+         for itemset in auxDB.getDataBase():
+             self.getDataBase().append(itemset)
 
 class DbGen:
 
@@ -73,15 +70,18 @@ class DbGen:
          self.minSupLevels.append(absoluteSupLevel)
          self.DB = self.genOperator(step, absoluteSupLevel)
          for step in range(2, collectionsSize + 1):
-             absoluteSupLevel = self.DB.getMaxSup() + 1
+             absoluteSupLevel = self.getSupportLevel()
              self.minSupLevels.append(absoluteSupLevel)
-             self.DB.appendDB(self.genOperator(step, absoluteSupLevel))
+             self.getDB().appendDB(self.genOperator(step, absoluteSupLevel))
 
-    def getDB(self): # Get final database
+    def getDB(self):  # Get final database
         return self.DB
 
     def getDBsize(self):
         return self.DB.size()
+
+    def getSupportLevel(self):
+        return self.getDB().getMaxSup() + 1
 
     def getRelMinSupLev(self): # Get relative minimum support levels
         return [minsup/self.getDBsize() for minsup in self.minSupLevels]
