@@ -64,7 +64,7 @@ class DbGen:
 
     def runDbGenBasic(self):
          collectionsSize = len(self.collection_list) # number of maximal collections
-         step = 1 # current level
+         step = 0 # M1 saved at 0 zero, M2 at 1 one, ...
          absoluteSupLevel = 1 # Absolute support level
          self.minSupLevels.clear()
          self.minSupLevels.append(absoluteSupLevel)
@@ -83,14 +83,16 @@ class DbGen:
     def getSupportLevel(self):
         return self.getDB().getMaxSup() + 1
 
-    def getRelMinSupLev(self): # Get relative minimum support levels
+    def getRelMinSupLev(self):  # Get relative minimum support levels
         return [minsup/self.getDBsize() for minsup in self.minSupLevels]
 
-    def getAbsMinSupLev(self): # Get absolute minimum support levels
+    def getAbsMinSupLev(self):  # Get absolute minimum support levels
         return self.minSupLevels
 
-    def genOperator(self, level, absoluteSupLevel):
-        return DataBase()
+    def genOperator(self, step, absoluteSupLevel):
+        for itemset in self.collection_list[step].getDataBase():
+            itemset.cardinality = absoluteSupLevel
+        return self.collection_list[step]
 
     def loadCollections(self):
         self.collection_list.clear()
@@ -113,7 +115,7 @@ class DbGen:
         i = 0
         while i < (len(self.collection_list) - 1):
            j = i + 1
-           mc1 = self.collection_list[i].getDataBase() # returns a list of ItemSet
+           mc1 = self.collection_list[i].getDataBase()  # returns a list of ItemSet
            mc2 = self.collection_list[j].getDataBase()
            for itemset2 in mc2:
                isSubset = False
