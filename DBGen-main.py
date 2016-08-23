@@ -16,9 +16,10 @@ def main():
 
         var = DbGen(input_item_delimeter, output_item_delimeter, minimum_support_list, targetype, output_format, inputfile, maximalout)
         var.dbGenBasic()
-        var.getDB()
-        var.getRelMinSupLev()
-
+        print("List of absolute minimum support levels : " + var.getAbsMinSupLev())
+        print("List of relative minimum support levels : " + var.getRelMinSupLev())
+        print("Satisfy the inverse mining property? :" + var.satisfyInverseMiningProp())
+        print("DBGen database : \n", var.getDB().printDB())
 
 if __name__ == "__main__":
         main()
