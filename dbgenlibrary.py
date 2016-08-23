@@ -5,19 +5,20 @@ from collections import Counter
 import copy
 
 class ItemSet:
-
     def __init__(self):
         self.itemset = set()
         self.cardinality = 1
+
     def add(self, value):
         self.itemset.add(value)
+
     def size(self):
         return len(self.itemset)
+
     def getItemSet(self):
         return self.itemset
 
 class DataBase:
-
     # Contains a list of itemsets
     def __init__(self):
         self.database = list()
@@ -32,21 +33,16 @@ class DataBase:
     def size(self):
         return len(self.database)
 
-    def getMaxSup(self):  # Maximum of the absolute support values of all the singleton items of DB
+    def getUniverseSup(self):  # Maximum of the absolute support values of all the singleton items of DB
         self.itemUniverseSup.clear()
         for itemset in self.getDataBase():
-            self.itemUniverseSup.update(itemset.getItemSet())
-        return max(self.itemUniverseSup.values())
-
-    def appendDB(self, auxDB):
-        for itemset in auxDB.getDataBase():
-            self.append(itemset)
+            self.itemUniverseSup.update({}.fromkeys(itemset.getItemSet(), 0))
+        return self.itemUniverseSup
 
     def printDB(self):
         pass
 
 class DbGen:
-
     def __init__(self, input_item_delimiter, output_item_delimiter, minimum_support_list, targetype, output_format, inputfile, maximalout):
         self.input_item_delimiter = input_item_delimiter
         self.output_item_delimiter = output_item_delimiter
@@ -55,9 +51,8 @@ class DbGen:
         self.output_format = output_format
         self.inputfile = inputfile
         self.maximalout = maximalout
-        self.collection_list = list() # list of maximal collections Ex: M1, M2, M3
+        self.collection_list = list()  # list of maximal collections Ex: M1, M2, M3
         self.minSupLevels = list()
-        self.DB = None
 
     def dbGenBasic(self):
         self.loadCollections()
@@ -67,39 +62,33 @@ class DbGen:
             raise Exception("This DB does not satisfy the containment property.")
 
     def runDbGenBasic(self):
-         numberCollections = self.getNumCollections() # number of maximal collections
-         step = 0 # M1 saved at 0 zero, M2 at 1 one, ...
-         absoluteSupLevel = 1 # Absolute support level
-         self.minSupLevels.clear()
-         self.minSupLevels.append(absoluteSupLevel)
-         self.DB = self.genOperator(step, absoluteSupLevel)
-         for step in range(1, numberCollections):
-             absoluteSupLevel = self.getSupportLevel()
-             self.minSupLevels.append(absoluteSupLevel)
-             self.getDB().appendDB(self.genOperator(step, absoluteSupLevel))
-
-    def getDB(self):  # Get final database
-        return self.DB
+        absoluteSupLevel = 1  # Absolute support level
+        self.minSupLevels.clear()
+        self.minSupLevels.append(absoluteSupLevel)
+        numberCollections = self.getNumCollections()  # number of maximal collections
+        for step in range(1, numberCollections):  # M1 saved at 0 zero, M2 at 1 one, ...
+            absoluteSupLevel = self.getSupportLevel()
+            self.minSupLevels.append(absoluteSupLevel)
+            self.genOperator(step, absoluteSupLevel)
 
     def getDBsize(self):
-        return self.DB.size()
+        pass
 
-    def getSupportLevel(self):
-        return self.getDB().getMaxSup() + 1
+    def getSupportLevel(self, step):
+        counter = Counter()
+        for db in self.collection_list[0: step]:
+            counter += db.getUniverseSup()
+        return max(counter.values()) + 1
 
     def getRelMinSupLev(self):  # Get relative minimum support levels
-        return [minsup/self.getDBsize() for minsup in self.minSupLevels]
+        return [minsup / self.getDBsize() for minsup in self.minSupLevels]
 
     def getAbsMinSupLev(self):  # Get absolute minimum support levels
         return self.minSupLevels
 
     def genOperator(self, step, absoluteSupLevel):
-        auxDB = copy.deepcopy(self.collection_list[step])
-        if step > 0:
-            for itemset in auxDB.getDataBase():
-                itemset.cardinality = absoluteSupLevel
-        assert isinstance(auxDB, DataBase), 'in function genOperation, auxDB is not a DataBase object'
-        return auxDB
+        for itemset in self.collection_list[step].getDataBase():
+            itemset.cardinality = absoluteSupLevel
 
     def loadCollections(self):
         self.collection_list.clear()
@@ -121,25 +110,25 @@ class DbGen:
     def getNumCollections(self):
         return len(self.collection_list)
 
-    def satisfyContainmentProp(self): # check if the maximal collections satisfy the containment property. Ex: Mk [ Mk-1 [ ... [ M2 [ M1
+    def satisfyContainmentProp(self):  # check if the maximal collections satisfy the containment property. Ex: Mk [ Mk-1 [ ... [ M2 [ M1
         numberCollections = self.getNumCollections()
         if numberCollections == 1:
             return True
         i = 0
         while i < (numberCollections - 1):
-           j = i + 1
-           mc1 = self.collection_list[i].getDataBase()  # returns a list of ItemSet
-           mc2 = self.collection_list[j].getDataBase()
-           for itemset2 in mc2:
-               isSubset = False
-               set2 = itemset2.getItemSet()
-               for itemset1 in mc1:
+            j = i + 1
+            mc1 = self.collection_list[i].getDataBase()  # returns a list of ItemSet
+            mc2 = self.collection_list[j].getDataBase()
+            for itemset2 in mc2:
+                isSubset = False
+                set2 = itemset2.getItemSet()
+                for itemset1 in mc1:
                     if set2.issubset(itemset1.getItemSet()):
                         isSubset = True
                         break
-               if not isSubset:
-                   return False
-           i += 1
+                if not isSubset:
+                    return False
+            i += 1
         return True
 
     def satisfyInverseMiningProp(self):
