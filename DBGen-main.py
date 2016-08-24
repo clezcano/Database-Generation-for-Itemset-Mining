@@ -8,18 +8,18 @@ def main():
 
         input_item_delimeter = "-f,"
         output_item_delimeter = "-k,"
-        minimum_support_list = [("-s" + str(x).strip()) for x in [5.5, -1, 10.5]] # positive: percentage of transactions, negative: exact number of transactions
+        minimum_support_list = [("-s" + str(x).strip()) for x in [5.5, -1, 10.5]]  # positive: percentage of transactions, negative: exact number of transactions
         targetype = "-tm"  # frequest (s) maximal (m) closed (c)
-        output_format = '-v" "' # empty support information for output result
-        inputfile = "test.csv" # "groceries.csv"
-        maximalout = "-" # "-" for standard output
+        output_format = '-v" "'  # empty support information for output result
+        inputfile = "test.csv"  # "groceries.csv"
+        maximalout = "-"  # "-" for standard output
 
         var = DbGen(input_item_delimeter, output_item_delimeter, minimum_support_list, targetype, output_format, inputfile, maximalout)
         var.dbGenBasic()
         print("List of absolute minimum support levels : " + var.getAbsMinSupLev())
         print("List of relative minimum support levels : " + var.getRelMinSupLev())
+        print("DBGen database : \n", var.printDB())
         print("Satisfy the inverse mining property? :" + var.satisfyInverseMiningProp())
-        print("DBGen database : \n", var.getDB().printDB())
 
 if __name__ == "__main__":
         main()

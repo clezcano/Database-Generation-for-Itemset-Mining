@@ -2,7 +2,6 @@
 
 from subprocess import check_output
 from collections import Counter
-import copy
 
 class ItemSet:
     def __init__(self):
@@ -36,11 +35,8 @@ class DataBase:
     def getUniverseSup(self):  # Maximum of the absolute support values of all the singleton items of DB
         self.itemUniverseSup.clear()
         for itemset in self.getDataBase():
-            self.itemUniverseSup.update({}.fromkeys(itemset.getItemSet(), 0))
+            self.itemUniverseSup.update({}.fromkeys(itemset.getItemSet(), itemset.cardinality))
         return self.itemUniverseSup
-
-    def printDB(self):
-        pass
 
 class DbGen:
     def __init__(self, input_item_delimiter, output_item_delimiter, minimum_support_list, targetype, output_format, inputfile, maximalout):
@@ -54,6 +50,8 @@ class DbGen:
         self.collection_list = list()  # list of maximal collections Ex: M1, M2, M3
         self.minSupLevels = list()
 
+    # collection_list = [DataBase(), DataBase(),...]
+    # colection_list[i] = [ItemSet(), ItemSet(),...]
     def dbGenBasic(self):
         self.loadCollections()
         if self.satisfyContainmentProp():
@@ -72,7 +70,10 @@ class DbGen:
             self.genOperator(step, absoluteSupLevel)
 
     def getDBsize(self):
-        pass
+        count = 0
+        for db in self.getCollections():
+            count += db.size()
+        return count
 
     def getSupportLevel(self, step):
         counter = Counter()
@@ -130,6 +131,9 @@ class DbGen:
                     return False
             i += 1
         return True
+
+    def printDB(self):
+        [[print(",".join(itemset.getItemSet())) for itemset in db.getDataBase()] for db in self.getCollections()]
 
     def satisfyInverseMiningProp(self):
         pass
