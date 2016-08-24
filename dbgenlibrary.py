@@ -133,7 +133,7 @@ class DbGen:
         return True
 
     def printDB(self):
-        [[print(",".join(itemset.getItemSet())) for itemset in db.getDataBase()] for db in self.getCollections()]
+        [[[print(",".join(itemset.getItemSet())) for _ in range(itemset.cardinality)] for itemset in db.getDataBase()] for db in self.getCollections()]
 
     def satisfyInverseMiningProp(self):
         pass
