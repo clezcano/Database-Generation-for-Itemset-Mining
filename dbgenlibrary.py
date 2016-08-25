@@ -2,6 +2,7 @@
 
 from subprocess import check_output
 from collections import Counter
+import csv
 
 class ItemSet:
     def __init__(self):
@@ -135,5 +136,34 @@ class DbGen:
     def printDB(self):
         [[[print(",".join(itemset.getItemSet())) for _ in range(itemset.cardinality)] for itemset in db.getDataBase()] for db in self.getCollections()]
 
+    def printDBtoFile(self, fileName):
+        csvFile = open(fileName, 'w', newline='')
+        csvWriter = csv.writer(csvFile, delimiter=',', lineterminator='\n')
+        [[csvWriter.writerow(itemset.getItemSet()) for itemset in db.getDataBase()] for db in range(self.getCollections())]
+        csvFile.close()
+
+    def compareDB(self, db):
+        if len(db) != self.getNumCollections():
+            print("Error in SatifyInverseMiningProp - collection lists' lenght not equal")
+            return False
+
+        for i in range(self.getNumCollections()):
+            A = self.collection_list[i].getDataBase()
+            B = db[i].getDataBase()
+            if [x for x in A if x not in B] + [y for y in B if y not in A] != []:  # if (A-B) + (B-A) != []
+                return False
+        return True
+
     def satisfyInverseMiningProp(self):
-        pass
+        file = "testoutput.csv"
+        self.printDBtoFile(file)
+        input_item_delimeter = "-f,"
+        output_item_delimeter = "-k,"
+        minimum_support_list = [("-s" + str(x).strip()) for x in self.getAbsMinSupLev()]  # positive: percentage of transactions, negative: exact number of transactions
+        targetype = "-tm"  # frequest (s) maximal (m) closed (c)
+        output_format = '-v" "'  # empty support information for output result
+        inputfile = file
+        maximalout = "-"  # "-" for standard output
+        varInv = DbGen(input_item_delimeter, output_item_delimeter, minimum_support_list, targetype, output_format, inputfile, maximalout)
+        varInv.loadCollections()
+        return True if self.compareDB(varInv.getCollections()) else False
