@@ -1,4 +1,4 @@
-# Algorithms based on paper "Distribution-Based Synthetic Database Generation Techniques for Itemset Mining" by Ganesh Ramesh, Mohammed J. Zaki and William A. Maniatty
+# Implementation of algorithms based on paper "Distribution-Based Synthetic Database Generation Techniques for Itemset Mining" by Ganesh Ramesh, Mohammed J. Zaki and William A. Maniatty
 
 from subprocess import check_output
 from collections import Counter
@@ -139,7 +139,7 @@ class DbGen:
     def printDBtoFile(self, fileName):
         csvFile = open(fileName, 'w', newline='')
         csvWriter = csv.writer(csvFile, delimiter=',', lineterminator='\n')
-        [[csvWriter.writerow(itemset.getItemSet()) for itemset in db.getDataBase()] for db in range(self.getCollections())]
+        [[[csvWriter.writerow(itemset.getItemSet()) for _ in range(itemset.cardinality)] for itemset in db.getDataBase()] for db in self.getCollections()]
         csvFile.close()
 
     def compareDB(self, db):
