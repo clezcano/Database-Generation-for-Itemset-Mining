@@ -60,6 +60,10 @@ class DbGen:
         else:
             raise Exception("This DB does not satisfy the containment property.")
 
+    def dbGenOptimized(self):
+        pass
+
+
     def runDbGenBasic(self):
         absoluteSupLevel = 1  # Absolute support level
         self.minSupLevels.clear()
