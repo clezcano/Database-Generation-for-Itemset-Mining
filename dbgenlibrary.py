@@ -181,8 +181,8 @@ class DbGen:
             return False
 
         for i in range(self.getNumCollections()):
-            A = self.collection_list[i].getDataBase()
-            B = db[i].getDataBase()
+            A = [itemset.getItemSet() for itemset in self.collection_list[i].getDataBase()]
+            B = [itemset.getItemSet() for itemset in db[i].getDataBase()]
             if [x for x in A if x not in B] + [y for y in B if y not in A] != []:  # if (A-B) + (B-A) != []
                 return False
         return True
