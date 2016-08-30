@@ -146,13 +146,12 @@ class DbGen:
         i = 0
         while i < (numberCollections - 1):
             j = i + 1
-            mc1 = self.collection_list[i].getDataBase()  # returns a list of ItemSet
-            mc2 = self.collection_list[j].getDataBase()
+            mc1 = [itemset.getItemSet() for itemset in self.collection_list[i].getDataBase()]  # returns a list of ItemSet
+            mc2 = [itemset.getItemSet() for itemset in self.collection_list[j].getDataBase()]
             for itemset2 in mc2:
                 isSubset = False
-                set2 = itemset2.getItemSet()
                 for itemset1 in mc1:
-                    if set2.issubset(itemset1.getItemSet()):
+                    if itemset2.issubset(itemset1):
                         isSubset = True
                         break
                 if not isSubset:
