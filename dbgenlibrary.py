@@ -69,19 +69,23 @@ class DbGen:
         if not self.satisfyContainmentProp():
             raise Exception("This DB does not satisfy the containment property.")
 
-    def dbGenOptimized(self):
-        pass
-
-
     def dbGenBasic(self):
         absoluteSupLevel = 1  # Absolute support level
         self.basicMinSupLevels.clear()
         self.basicMinSupLevels.append(absoluteSupLevel)
-        numberCollections = self.getNumCollections()  # number of maximal collections
-        for step in range(1, numberCollections):  # M1 saved at 0 zero, M2 at 1 one, ...
-            absoluteSupLevel = self.getSupportLevel()
+        for step in range(1, self.getNumCollections()):  # M1 saved at 0 zero, M2 at 1 one, ...
+            absoluteSupLevel = self.getSupportLevel(step, DbGenType.Basic)
             self.basicMinSupLevels.append(absoluteSupLevel)
             self.genOperator(step, absoluteSupLevel, DbGenType.Basic)
+
+    def dbGenOptimized(self):
+        absoluteSupLevel = 1  # Absolute support level
+        self.optimizedMinSupLevels.clear()
+        self.optimizedMinSupLevels.append(absoluteSupLevel)
+        for step in range(1, self.getNumCollections()):  # M1 saved at 0 zero, M2 at 1 one, ...
+            absoluteSupLevel = self.getSupportLevel(step, DbGenType.Optimized)
+            self.optimizedMinSupLevels.append(absoluteSupLevel)
+            self.genOperator(step, absoluteSupLevel, DbGenType.Optimized)
 
     def getDBsize(self, algorithm):
         count = 0
@@ -92,11 +96,20 @@ class DbGen:
                 count += db.size(DbGenType.Optimized)
         return count
 
-    def getSupportLevel(self, step):
+    def getSupportLevel(self, step, algorithm):
+        if algorithm == DbGenType.Basic:
+            return self.supportLevelBasic(step)
+        elif algorithm == DbGenType.Optimized:
+            return self.supportLevelOptimized(step)
+
+    def supportLevelBasic(self, step):
         counter = Counter()
         for db in self.collection_list[0: step]:
             counter += db.getUniverseSup()
         return max(counter.values()) + 1
+
+    def supportLevelOptimized(self, step):
+        pass
 
     def getRelMinSupLev(self, algorithm):  # Get relative minimum support levels
         if algorithm == DbGenType.Basic:
