@@ -2,12 +2,18 @@
 
 from subprocess import check_output
 from collections import Counter
+from enum import Enum
 import csv
+
+class DbGenType(Enum):
+    Basic = 1
+    Optimized = 2
 
 class ItemSet:
     def __init__(self):
         self.itemset = set()
-        self.cardinality = 1
+        self.basicCardinality = 1  # DbGenBasic algorithm updates this parameter
+        self.optimizedCardinality = 1  # DbGenOptimized algorithm updates this parameter
 
     def add(self, value):
         self.itemset.add(value)
@@ -30,16 +36,24 @@ class DataBase:
     def append(self, value):
         self.database.append(value)
 
-    def size(self):
-        return len(self.database)
+    def size(self, algorithm):
+        count = 0
+        for itemset in self.getDataBase():
+            if algorithm == DbGenType.Basic:
+                count += itemset.basicCardinality
+            elif algorithm == DbGenType.Optimized:
+                count += itemset.optimizedCardinality
+        return count
 
     def getUniverseSup(self):  # Maximum of the absolute support values of all the singleton items of DB
         self.itemUniverseSup.clear()
         for itemset in self.getDataBase():
-            self.itemUniverseSup.update({}.fromkeys(itemset.getItemSet(), itemset.cardinality))
+            self.itemUniverseSup.update({}.fromkeys(itemset.getItemSet(), itemset.basicCardinality))
         return self.itemUniverseSup
 
 class DbGen:
+    # collection_list = [DataBase(), DataBase(),...]
+    # colection_list[i] = [ItemSet(), ItemSet(),...]
     def __init__(self, input_item_delimiter, output_item_delimiter, minimum_support_list, targetype, output_format, inputfile, maximalout):
         self.input_item_delimiter = input_item_delimiter
         self.output_item_delimiter = output_item_delimiter
@@ -49,35 +63,33 @@ class DbGen:
         self.inputfile = inputfile
         self.maximalout = maximalout
         self.collection_list = list()  # list of maximal collections Ex: M1, M2, M3
-        self.minSupLevels = list()
-
-    # collection_list = [DataBase(), DataBase(),...]
-    # colection_list[i] = [ItemSet(), ItemSet(),...]
-    def dbGenBasic(self):
+        self.basicMinSupLevels = list()  # Minimum support levels of dbGenBasic algorithm
+        self.optimizedMinSupLevels = list()  # Minimum support levels of dbGenOptimized algorithm
         self.loadCollections()
-        if self.satisfyContainmentProp():
-            self.runDbGenBasic()
-        else:
+        if not self.satisfyContainmentProp():
             raise Exception("This DB does not satisfy the containment property.")
 
     def dbGenOptimized(self):
         pass
 
 
-    def runDbGenBasic(self):
+    def dbGenBasic(self):
         absoluteSupLevel = 1  # Absolute support level
-        self.minSupLevels.clear()
-        self.minSupLevels.append(absoluteSupLevel)
+        self.basicMinSupLevels.clear()
+        self.basicMinSupLevels.append(absoluteSupLevel)
         numberCollections = self.getNumCollections()  # number of maximal collections
         for step in range(1, numberCollections):  # M1 saved at 0 zero, M2 at 1 one, ...
             absoluteSupLevel = self.getSupportLevel()
-            self.minSupLevels.append(absoluteSupLevel)
-            self.genOperator(step, absoluteSupLevel)
+            self.basicMinSupLevels.append(absoluteSupLevel)
+            self.genOperator(step, absoluteSupLevel, DbGenType.Basic)
 
-    def getDBsize(self):
+    def getDBsize(self, algorithm):
         count = 0
         for db in self.getCollections():
-            count += db.size()
+            if algorithm == DbGenType.Basic:
+                count += db.size(DbGenType.Basic)
+            elif algorithm == DbGenType.Optimized:
+                count += db.size(DbGenType.Optimized)
         return count
 
     def getSupportLevel(self, step):
@@ -86,15 +98,26 @@ class DbGen:
             counter += db.getUniverseSup()
         return max(counter.values()) + 1
 
-    def getRelMinSupLev(self):  # Get relative minimum support levels
-        return [minsup / self.getDBsize() for minsup in self.minSupLevels]
+    def getRelMinSupLev(self, algorithm):  # Get relative minimum support levels
+        if algorithm == DbGenType.Basic:
+            BasicDBsize = self.getDBsize(DbGenType.Basic)
+            return [minsup / BasicDBsize for minsup in self.basicMinSupLevels]
+        elif algorithm == DbGenType.Optimized:
+            OptimizedDBsize = self.getDBsize(DbGenType.Optimized)
+            return [minsup / OptimizedDBsize for minsup in self.optimizedMinSupLevels]
 
-    def getAbsMinSupLev(self):  # Get absolute minimum support levels
-        return self.minSupLevels
+    def getAbsMinSupLev(self, algorithm):  # Get absolute minimum support levels
+        if algorithm == DbGenType.Basic:
+            return self.basicMinSupLevels
+        elif algorithm == DbGenType.Optimized:
+            return self.optimizedMinSupLevels
 
-    def genOperator(self, step, absoluteSupLevel):
+    def genOperator(self, step, absoluteSupLevel, algorithm):
         for itemset in self.collection_list[step].getDataBase():
-            itemset.cardinality = absoluteSupLevel
+            if algorithm == DbGenType.Basic:
+                itemset.basicCardinality = absoluteSupLevel
+            elif algorithm == DbGenType.Optimized:
+                itemset.optimizedCardinality = absoluteSupLevel
 
     def loadCollections(self):
         self.collection_list.clear()
@@ -137,13 +160,19 @@ class DbGen:
             i += 1
         return True
 
-    def printDB(self):
-        [[[print(",".join(itemset.getItemSet())) for _ in range(itemset.cardinality)] for itemset in db.getDataBase()] for db in self.getCollections()]
+    def printDB(self, algorithm):
+        if algorithm == DbGenType.Basic:
+            [[[print(",".join(itemset.getItemSet())) for _ in range(itemset.basicCardinality)] for itemset in db.getDataBase()] for db in self.getCollections()]
+        elif algorithm == DbGenType.Optimized:
+            [[[print(",".join(itemset.getItemSet())) for _ in range(itemset.optimizedCardinality)] for itemset in db.getDataBase()] for db in self.getCollections()]
 
-    def printDBtoFile(self, fileName):
+    def printDBtoFile(self, fileName, algorithm):
         csvFile = open(fileName, 'w', newline='')
         csvWriter = csv.writer(csvFile, delimiter=',', lineterminator='\n')
-        [[[csvWriter.writerow(itemset.getItemSet()) for _ in range(itemset.cardinality)] for itemset in db.getDataBase()] for db in self.getCollections()]
+        if algorithm == DbGenType.Basic:
+            [[[csvWriter.writerow(itemset.getItemSet()) for _ in range(itemset.basicCardinality)] for itemset in db.getDataBase()] for db in self.getCollections()]
+        elif algorithm == DbGenType.Optimized:
+            [[[csvWriter.writerow(itemset.getItemSet()) for _ in range(itemset.optimizedCardinality)] for itemset in db.getDataBase()] for db in self.getCollections()]
         csvFile.close()
 
     def compareDB(self, db):
@@ -158,16 +187,18 @@ class DbGen:
                 return False
         return True
 
-    def satisfyInverseMiningProp(self):
+    def satisfyInverseMiningProp(self, algorithm):
         file = "testoutput.csv"
-        self.printDBtoFile(file)
+        self.printDBtoFile(file, algorithm)
         input_item_delimeter = "-f,"
         output_item_delimeter = "-k,"
-        minimum_support_list = [("-s" + str(x).strip()) for x in self.getAbsMinSupLev()]  # positive: percentage of transactions, negative: exact number of transactions
+        if algorithm == DbGenType.Basic:
+            minimum_support_list = [("-s-" + str(x).strip()) for x in self.getAbsMinSupLev(DbGenType.Basic)]  # positive: percentage of transactions, negative: exact number of transactions
+        elif algorithm == DbGenType.Optimized:
+            minimum_support_list = [("-s-" + str(x).strip()) for x in self.getAbsMinSupLev(DbGenType.Optimized)]  # positive: percentage of transactions, negative: exact number of transactions
         targetype = "-tm"  # frequest (s) maximal (m) closed (c)
         output_format = '-v" "'  # empty support information for output result
         inputfile = file
         maximalout = "-"  # "-" for standard output
         varInv = DbGen(input_item_delimeter, output_item_delimeter, minimum_support_list, targetype, output_format, inputfile, maximalout)
-        varInv.loadCollections()
         return True if self.compareDB(varInv.getCollections()) else False
