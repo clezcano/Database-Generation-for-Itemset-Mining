@@ -111,6 +111,9 @@ class DbGen:
     def supportLevelOptimized(self, step):
         pass
 
+    def getItemsetSupport(self, itemset, step):
+        pass
+
     def getRelMinSupLev(self, algorithm):  # Get relative minimum support levels
         if algorithm == DbGenType.Basic:
             BasicDBsize = self.getDBsize(DbGenType.Basic)
@@ -126,11 +129,13 @@ class DbGen:
             return self.optimizedMinSupLevels
 
     def genOperator(self, step, absoluteSupLevel, algorithm):
-        for itemset in self.collection_list[step].getDataBase():
-            if algorithm == DbGenType.Basic:
+        if algorithm == DbGenType.Basic:
+            for itemset in self.collection_list[step].getDataBase():
                 itemset.basicCardinality = absoluteSupLevel
-            elif algorithm == DbGenType.Optimized:
-                itemset.optimizedCardinality = absoluteSupLevel
+        elif algorithm == DbGenType.Optimized:
+            for itemset in self.collection_list[step].getDataBase():
+                itemsetsup = self.getItemsetSupport(itemset, step)
+                itemset.optimizedCardinality = (absoluteSupLevel - itemsetsup) if itemsetsup < absoluteSupLevel else 0
 
     def loadCollections(self):
         self.collection_list.clear()
