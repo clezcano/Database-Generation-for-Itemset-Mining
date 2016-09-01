@@ -30,3 +30,10 @@ def satisfyContainmentProp(
                 return False
         i += 1
     return True
+
+
+count = 0
+for itemset in self.getDataBase():
+    if xitemset.getItemSet().issubset(itemset.getItemSet()):
+        count += 1
+return count

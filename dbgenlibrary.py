@@ -1,9 +1,12 @@
 # Implementation of algorithms based on paper "Distribution-Based Synthetic Database Generation Techniques for Itemset Mining" by Ganesh Ramesh, Mohammed J. Zaki and William A. Maniatty
 
+from functools import reduce
 from subprocess import check_output
 from collections import Counter
 from enum import Enum
+from operator import add
 import csv
+
 
 class DbGenType(Enum):
     Basic = 1
@@ -37,13 +40,10 @@ class DataBase:
         self.database.append(value)
 
     def size(self, algorithm):
-        count = 0
-        for itemset in self.getDataBase():
-            if algorithm == DbGenType.Basic:
-                count += itemset.basicCardinality
-            elif algorithm == DbGenType.Optimized:
-                count += itemset.optimizedCardinality
-        return count
+        if algorithm == DbGenType.Basic:
+            return reduce(add, [itemset.basicCardinality for itemset in self.getDataBase()])
+        elif algorithm == DbGenType.Optimized:
+            return reduce(add, [itemset.optimizedCardinality for itemset in self.getDataBase()])
 
     def getUniverseSup(self):  # Maximum of the absolute support values of all the singleton items of DB
         self.itemUniverseSup.clear()
@@ -52,11 +52,7 @@ class DataBase:
         return self.itemUniverseSup
 
     def getItemsetSup(self, xitemset):
-        count = 0
-        for itemset in self.getDataBase():
-            if xitemset.getItemSet().issubset(itemset.getItemSet()):
-                count += 1
-        return count
+        return reduce(add, map(lambda y: y.optimizedCardinality, filter(lambda x: xitemset.getItemSet().issubset(x.getItemSet()), self.getDataBase())))
 
 class DbGen:
     # collection_list = [DataBase(), DataBase(),...]
@@ -95,13 +91,10 @@ class DbGen:
             self.genOperator(step, absoluteSupLevel, DbGenType.Optimized)
 
     def getDBsize(self, algorithm):
-        count = 0
-        for db in self.getCollections():
-            if algorithm == DbGenType.Basic:
-                count += db.size(DbGenType.Basic)
-            elif algorithm == DbGenType.Optimized:
-                count += db.size(DbGenType.Optimized)
-        return count
+        if algorithm == DbGenType.Basic:
+            return reduce(add, [db.size(DbGenType.Basic) for db in self.getCollections()])
+        elif algorithm == DbGenType.Optimized:
+            return reduce(add, [db.size(DbGenType.Optimized) for db in self.getCollections()])
 
     def getSupportLevel(self, step, algorithm):
         if algorithm == DbGenType.Basic:
@@ -119,10 +112,7 @@ class DbGen:
         pass
 
     def getItemsetSupport(self, itemset, step):
-        counter = 0
-        for db in self.collection_list[0: step]:
-            counter += db.getItemsetSup(itemset)
-        return counter
+        return reduce(add, [db.getItemsetSup(itemset) for db in self.collection_list[0: step]])
 
     def getRelMinSupLev(self, algorithm):  # Get relative minimum support levels
         if algorithm == DbGenType.Basic:
@@ -206,7 +196,6 @@ class DbGen:
         if len(db) != self.getNumCollections():
             print("Error in SatifyInverseMiningProp - collection lists' lenght not equal")
             return False
-
         for i in range(self.getNumCollections()):
             A = [itemset.getItemSet() for itemset in self.collection_list[i].getDataBase()]
             B = [itemset.getItemSet() for itemset in db[i].getDataBase()]
