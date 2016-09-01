@@ -1,4 +1,5 @@
-# Implementation of algorithms based on paper "Distribution-Based Synthetic Database Generation Techniques for Itemset Mining" by Ganesh Ramesh, Mohammed J. Zaki and William A. Maniatty
+# Implementation from scratch of the algorithms presented in the paper "Distribution-Based Synthetic Database Generation Techniques for Itemset Mining" by Ganesh Ramesh, Mohammed J. Zaki and William A. Maniatty
+# Programmer: Christian Lezcano
 
 from functools import reduce
 from subprocess import check_output
@@ -6,7 +7,6 @@ from collections import Counter
 from enum import Enum
 from operator import add
 import csv
-
 
 class DbGenType(Enum):
     Basic = 1
@@ -111,6 +111,9 @@ class DbGen:
     def supportLevelOptimized(self, step):
         pass
 
+    def minSup(self, step, itemset):
+        return min([self.getItemsetSupport(itemset, step) for itemset in self.collection_list[step].getDataBase()])
+
     def getItemsetSupport(self, itemset, step):
         return reduce(add, [db.getItemsetSup(itemset) for db in self.collection_list[0: step]])
 
@@ -179,9 +182,15 @@ class DbGen:
 
     def printDB(self, algorithm):
         if algorithm == DbGenType.Basic:
-            [[[print(",".join(itemset.getItemSet())) for _ in range(itemset.basicCardinality)] for itemset in db.getDataBase()] for db in self.getCollections()]
+            for db in self.getCollections():
+                for itemset in db.getDataBase():
+                    for _ in range(itemset.basicCardinality):
+                        print(",".join(itemset.getItemSet()))
         elif algorithm == DbGenType.Optimized:
-            [[[print(",".join(itemset.getItemSet())) for _ in range(itemset.optimizedCardinality)] for itemset in db.getDataBase()] for db in self.getCollections()]
+            for db in self.getCollections():
+                for itemset in db.getDataBase():
+                    for _ in range(itemset.optimizedCardinality):
+                        print(",".join(itemset.getItemSet()))
 
     def printDBtoFile(self, fileName, algorithm):
         csvFile = open(fileName, 'w', newline='')

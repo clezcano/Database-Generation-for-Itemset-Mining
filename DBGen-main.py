@@ -1,3 +1,6 @@
+# Implementation from scratch of the algorithms presented in the paper "Distribution-Based Synthetic Database Generation Techniques for Itemset Mining" by Ganesh Ramesh, Mohammed J. Zaki and William A. Maniatty
+# Programmer: Christian Lezcano
+
 from dbgenlibrary import *
 
 def main():
