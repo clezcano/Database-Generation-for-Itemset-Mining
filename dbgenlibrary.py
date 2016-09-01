@@ -51,6 +51,13 @@ class DataBase:
             self.itemUniverseSup.update({}.fromkeys(itemset.getItemSet(), itemset.basicCardinality))
         return self.itemUniverseSup
 
+    def getItemsetSup(self, xitemset):
+        count = 0
+        for itemset in self.getDataBase():
+            if xitemset.getItemSet().issubset(itemset.getItemSet()):
+                count += 1
+        return count
+
 class DbGen:
     # collection_list = [DataBase(), DataBase(),...]
     # colection_list[i] = [ItemSet(), ItemSet(),...]
@@ -112,7 +119,10 @@ class DbGen:
         pass
 
     def getItemsetSupport(self, itemset, step):
-        pass
+        counter = 0
+        for db in self.collection_list[0: step]:
+            counter += db.getItemsetSup(itemset)
+        return counter
 
     def getRelMinSupLev(self, algorithm):  # Get relative minimum support levels
         if algorithm == DbGenType.Basic:
