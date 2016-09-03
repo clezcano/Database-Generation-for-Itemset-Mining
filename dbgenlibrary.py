@@ -6,6 +6,7 @@ from subprocess import check_output
 from collections import Counter
 from enum import Enum
 from operator import add
+from itertools import chain, combinations
 import csv
 
 class DbGenType(Enum):
@@ -51,7 +52,7 @@ class DataBase:
             self.itemUniverseSup.update({}.fromkeys(itemset.getItemSet(), itemset.basicCardinality))
         return self.itemUniverseSup
 
-    def getItemsetSup(self, xitemset):
+    def getItemsetSup(self, xitemset):  # get the absolute support of an itemset in a database
         return reduce(add, map(lambda y: y.optimizedCardinality, filter(lambda x: xitemset.getItemSet().issubset(x.getItemSet()), self.getDataBase())))
 
 class DbGen:
@@ -109,12 +110,19 @@ class DbGen:
         return max(counter.values()) + 1
 
     def supportLevelOptimized(self, step):
-        pass
+        m1 = reduce(lambda a, y: a | y, [self.powerset(xpowerset.getItemSet()) for xpowerset in self.collection_list[step - 1].getDataBase()])
+        m2 = reduce(lambda a, y: a | y, [self.powerset(xpowerset.getItemSet()) for xpowerset in self.collection_list[step].getDataBase()])
+        diff = set(m1).difference(m2)
 
-    def minSup(self, step, itemset):
+    def powerset(db):  # powerset([1,2,3]) --> () (1,) (2,) (3,) (1,2) (1,3) (2,3) (1,2,3)"
+        [itemset.getItemSet() for itemset in db.getDataBase()]
+        s = list(db)
+        return chain.from_iterable(combinations(s, r) for r in range(len(s) + 1))
+
+    def minSup(self, step):  # get the minimum support of all the itemset of a database
         return min([self.getItemsetSupport(itemset, step) for itemset in self.collection_list[step].getDataBase()])
 
-    def getItemsetSupport(self, itemset, step):
+    def getItemsetSupport(self, itemset, step):  # get the absolute support of an itemset in the database DB
         return reduce(add, [db.getItemsetSup(itemset) for db in self.collection_list[0: step]])
 
     def getRelMinSupLev(self, algorithm):  # Get relative minimum support levels
@@ -164,20 +172,16 @@ class DbGen:
         numberCollections = self.getNumCollections()
         if numberCollections == 1:
             return True
-        i = 0
-        while i < (numberCollections - 1):
+        for i in range(numberCollections - 2):
             j = i + 1
-            mc1 = [itemset.getItemSet() for itemset in self.collection_list[i].getDataBase()]  # returns a list of ItemSet
-            mc2 = [itemset.getItemSet() for itemset in self.collection_list[j].getDataBase()]
-            for itemset2 in mc2:
+            for itemset2 in self.collection_list[j].getDataBase():
                 isSubset = False
-                for itemset1 in mc1:
-                    if itemset2.issubset(itemset1):
+                for itemset1 in self.collection_list[i].getDataBase():
+                    if itemset2.getItemSet().issubset(itemset1.getItemSet()):
                         isSubset = True
                         break
                 if not isSubset:
                     return False
-            i += 1
         return True
 
     def printDB(self, algorithm):
@@ -196,9 +200,15 @@ class DbGen:
         csvFile = open(fileName, 'w', newline='')
         csvWriter = csv.writer(csvFile, delimiter=',', lineterminator='\n')
         if algorithm == DbGenType.Basic:
-            [[[csvWriter.writerow(itemset.getItemSet()) for _ in range(itemset.basicCardinality)] for itemset in db.getDataBase()] for db in self.getCollections()]
+            for db in self.getCollections():
+                for itemset in db.getDataBase():
+                    for _ in range(itemset.basicCardinality):
+                        csvWriter.writerow(itemset.getItemSet())
         elif algorithm == DbGenType.Optimized:
-            [[[csvWriter.writerow(itemset.getItemSet()) for _ in range(itemset.optimizedCardinality)] for itemset in db.getDataBase()] for db in self.getCollections()]
+            for db in self.getCollections():
+                for itemset in db.getDataBase():
+                    for _ in range(itemset.optimizedCardinality):
+                        csvWriter.writerow(itemset.getItemSet())
         csvFile.close()
 
     def compareDB(self, db):
