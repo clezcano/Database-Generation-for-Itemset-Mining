@@ -110,20 +110,30 @@ class DbGen:
         return max(counter.values()) + 1
 
     def supportLevelOptimized(self, step):
-        m1 = reduce(lambda a, y: a | y, [self.powerset(xpowerset.getItemSet()) for xpowerset in self.collection_list[step - 1].getDataBase()])
-        m2 = reduce(lambda a, y: a | y, [self.powerset(xpowerset.getItemSet()) for xpowerset in self.collection_list[step].getDataBase()])
+        m1 = reduce(lambda a, y: a | y, [self.powerset(itemset.getItemSet()) for itemset in self.collection_list[step - 1].getDataBase()])
+        m2 = reduce(lambda a, y: a | y, [self.powerset(itemset.getItemSet()) for itemset in self.collection_list[step].getDataBase()])
         diff = set(m1).difference(m2)
 
-    def powerset(db):  # powerset([1,2,3]) --> () (1,) (2,) (3,) (1,2) (1,3) (2,3) (1,2,3)"
-        [itemset.getItemSet() for itemset in db.getDataBase()]
-        s = list(db)
-        return chain.from_iterable(combinations(s, r) for r in range(len(s) + 1))
+    def powerset(self, itemset):  # powerset(set)
+        s = list(itemset)
+        return chain.from_iterable(combinations(s, r) for r in range(1, len(s) + 1))
 
-    def minSup(self, step):  # get the minimum support of all the itemset of a database
+    def getMinSupAll(self, step):  # get the minimum support of all the itemset in a database DB
         return min([self.getItemsetSupport(itemset, step) for itemset in self.collection_list[step].getDataBase()])
 
-    def getItemsetSupport(self, itemset, step):  # get the absolute support of an itemset in the database DB
-        return reduce(add, [db.getItemsetSup(itemset) for db in self.collection_list[0: step]])
+    def getMinimalItemsets(self, db):
+        minItemset = set()
+        for itemset1 in db.getDataBase():
+            isSuper = False
+            row1 = itemset1.getItemSet()
+            for itemset2 in db.getDataBase():
+                row2 = itemset2.getItemSet()
+                if row1 > row2:
+                    isSuper = True
+                    break
+            if isSuper is False:
+                minItemset.add(row1)
+        return minItemset
 
     def getRelMinSupLev(self, algorithm):  # Get relative minimum support levels
         if algorithm == DbGenType.Basic:
@@ -147,6 +157,9 @@ class DbGen:
             for itemset in self.collection_list[step].getDataBase():
                 itemsetsup = self.getItemsetSupport(itemset, step)
                 itemset.optimizedCardinality = (absoluteSupLevel - itemsetsup) if itemsetsup < absoluteSupLevel else 0
+
+    def getItemsetSupport(self, itemset, step):  # get the absolute support of an itemset in the database DB
+        return reduce(add, [db.getItemsetSup(itemset) for db in self.collection_list[0: step]])
 
     def loadCollections(self):
         self.collection_list.clear()
