@@ -91,11 +91,8 @@ class DbGen:
             self.optimizedMinSupLevels.append(absoluteSupLevel)
             self.genOperator(step, absoluteSupLevel, DbGenType.Optimized)
 
-    def getDBsize(self, algorithm):
-        if algorithm == DbGenType.Basic:
-            return reduce(add, [db.size(DbGenType.Basic) for db in self.getCollections()])
-        elif algorithm == DbGenType.Optimized:
-            return reduce(add, [db.size(DbGenType.Optimized) for db in self.getCollections()])
+    def getItemsetSupport(self, itemset, step):  # get the absolute support of an itemset in the database DB
+        return reduce(add, [db.getItemsetSup(itemset) for db in self.collection_list[0: step]])
 
     def getSupportLevel(self, step, algorithm):
         if algorithm == DbGenType.Basic:
@@ -110,6 +107,15 @@ class DbGen:
         return max(counter.values()) + 1
 
     def supportLevelOptimized(self, step):
+        maxTemp = max(self.optimizedMinSupLevels[step - 1], self.maxMinimal())
+        m2sup = list({self.getItemsetSupport(itemset, step) for itemset in self.collection_list[step]})
+        m2sup.sort()
+        for i in m2sup:
+            if i >= maxTemp:
+                return i
+        return maxTemp
+
+    def maxMinimal(self):
         m1 = reduce(lambda a, y: a | y, [self.powerset(itemset.getItemSet()) for itemset in self.collection_list[step - 1].getDataBase()])
         m2 = reduce(lambda a, y: a | y, [self.powerset(itemset.getItemSet()) for itemset in self.collection_list[step].getDataBase()])
         diff = set(m1).difference(m2)
@@ -117,9 +123,6 @@ class DbGen:
     def powerset(self, itemset):  # powerset(set)
         s = list(itemset)
         return chain.from_iterable(combinations(s, r) for r in range(1, len(s) + 1))
-
-    def getMinSupAll(self, step):  # get the minimum support of all the itemset in a database DB
-        return min([self.getItemsetSupport(itemset, step) for itemset in self.collection_list[step].getDataBase()])
 
     def getMinimalItemsets(self, db):
         minItemset = set()
@@ -135,6 +138,24 @@ class DbGen:
                 minItemset.add(row1)
         return minItemset
 
+    def genOperator(self, step, absoluteSupLevel, algorithm):
+        if algorithm == DbGenType.Basic:
+            for itemset in self.collection_list[step].getDataBase():
+                itemset.basicCardinality = absoluteSupLevel
+        elif algorithm == DbGenType.Optimized:
+            for itemset in self.collection_list[step].getDataBase():
+                itemsetsup = self.getItemsetSupport(itemset, step)
+                itemset.optimizedCardinality = (absoluteSupLevel - itemsetsup) if itemsetsup < absoluteSupLevel else 0
+
+    def getMinSupAll(self, step):  # get the minimum support of all the itemset in a database DB
+        return min([self.getItemsetSupport(itemset, step) for itemset in self.collection_list[step].getDataBase()])
+
+    def getDBsize(self, algorithm):
+        if algorithm == DbGenType.Basic:
+            return reduce(add, [db.size(DbGenType.Basic) for db in self.getCollections()])
+        elif algorithm == DbGenType.Optimized:
+            return reduce(add, [db.size(DbGenType.Optimized) for db in self.getCollections()])
+
     def getRelMinSupLev(self, algorithm):  # Get relative minimum support levels
         if algorithm == DbGenType.Basic:
             BasicDBsize = self.getDBsize(DbGenType.Basic)
@@ -148,18 +169,6 @@ class DbGen:
             return self.basicMinSupLevels
         elif algorithm == DbGenType.Optimized:
             return self.optimizedMinSupLevels
-
-    def genOperator(self, step, absoluteSupLevel, algorithm):
-        if algorithm == DbGenType.Basic:
-            for itemset in self.collection_list[step].getDataBase():
-                itemset.basicCardinality = absoluteSupLevel
-        elif algorithm == DbGenType.Optimized:
-            for itemset in self.collection_list[step].getDataBase():
-                itemsetsup = self.getItemsetSupport(itemset, step)
-                itemset.optimizedCardinality = (absoluteSupLevel - itemsetsup) if itemsetsup < absoluteSupLevel else 0
-
-    def getItemsetSupport(self, itemset, step):  # get the absolute support of an itemset in the database DB
-        return reduce(add, [db.getItemsetSup(itemset) for db in self.collection_list[0: step]])
 
     def loadCollections(self):
         self.collection_list.clear()
