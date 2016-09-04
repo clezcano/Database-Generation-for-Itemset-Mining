@@ -107,7 +107,7 @@ class DbGen:
         return max(counter.values()) + 1
 
     def supportLevelOptimized(self, step):
-        maxTemp = max(self.optimizedMinSupLevels[step - 1], self.maxMinimal())
+        maxTemp = max(self.optimizedMinSupLevels[step - 1], self.maxMinimal(step))
         m2sup = list({self.getItemsetSupport(itemset, step) for itemset in self.collection_list[step]})
         m2sup.sort()
         for i in m2sup:
@@ -115,21 +115,22 @@ class DbGen:
                 return i
         return maxTemp
 
-    def maxMinimal(self):
+    def maxMinimal(self, step):
         m1 = reduce(lambda a, y: a | y, [self.powerset(itemset.getItemSet()) for itemset in self.collection_list[step - 1].getDataBase()])
         m2 = reduce(lambda a, y: a | y, [self.powerset(itemset.getItemSet()) for itemset in self.collection_list[step].getDataBase()])
         diff = set(m1).difference(m2)
+        return self.getMaxSupAll(self.getMinimalItemsets(diff), step)
 
     def powerset(self, itemset):  # powerset(set)
         s = list(itemset)
         return chain.from_iterable(combinations(s, r) for r in range(1, len(s) + 1))
 
-    def getMinimalItemsets(self, db):
+    def getMinimalItemsets(self, dbList):
         minItemset = set()
-        for itemset1 in db.getDataBase():
+        for itemset1 in dbList:
             isSuper = False
             row1 = itemset1.getItemSet()
-            for itemset2 in db.getDataBase():
+            for itemset2 in dbList:
                 row2 = itemset2.getItemSet()
                 if row1 > row2:
                     isSuper = True
@@ -137,6 +138,9 @@ class DbGen:
             if isSuper is False:
                 minItemset.add(row1)
         return minItemset
+
+    def getMaxSupAll(self, dbList, step):  # get the minimum support of all the itemset in a database DB
+        return max([self.getItemsetSupport(itemset, step) for itemset in dbList])
 
     def genOperator(self, step, absoluteSupLevel, algorithm):
         if algorithm == DbGenType.Basic:
@@ -146,9 +150,6 @@ class DbGen:
             for itemset in self.collection_list[step].getDataBase():
                 itemsetsup = self.getItemsetSupport(itemset, step)
                 itemset.optimizedCardinality = (absoluteSupLevel - itemsetsup) if itemsetsup < absoluteSupLevel else 0
-
-    def getMinSupAll(self, step):  # get the minimum support of all the itemset in a database DB
-        return min([self.getItemsetSupport(itemset, step) for itemset in self.collection_list[step].getDataBase()])
 
     def getDBsize(self, algorithm):
         if algorithm == DbGenType.Basic:
