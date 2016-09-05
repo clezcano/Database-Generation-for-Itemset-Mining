@@ -58,7 +58,7 @@ class DataBase:
         elif isinstance(xitemset, set):
             return reduce(add, map(lambda y: y.optimizedCardinality, filter(lambda x: xitemset.issubset(x.getItemSet()), self.getDataBase())))
         else:
-            raise Exception("Method getItemsetSup() input an undefined parameter")
+            raise Exception("Method getItemsetSup() input an undefined parameter value")
 
 class DbGen:
     # collection_list = [DataBase(), DataBase(),...]
@@ -83,7 +83,7 @@ class DbGen:
         self.basicMinSupLevels.clear()
         self.basicMinSupLevels.append(absoluteSupLevel)
         for step in range(1, self.getNumCollections()):  # M1 saved at 0 zero, M2 at 1 one, ...
-            absoluteSupLevel = self.getSupportLevel(step, DbGenType.Basic)
+            absoluteSupLevel = self.getSupportLevel(step, DbGenType.Basic) + 1
             self.basicMinSupLevels.append(absoluteSupLevel)
             self.genOperator(step, absoluteSupLevel, DbGenType.Basic)
 
@@ -92,7 +92,7 @@ class DbGen:
         self.optimizedMinSupLevels.clear()
         self.optimizedMinSupLevels.append(absoluteSupLevel)
         for step in range(1, self.getNumCollections()):  # M1 saved at 0 zero, M2 at 1 one, ...
-            absoluteSupLevel = self.getSupportLevel(step, DbGenType.Optimized)
+            absoluteSupLevel = self.getSupportLevel(step, DbGenType.Optimized) + 1
             self.optimizedMinSupLevels.append(absoluteSupLevel)
             self.genOperator(step, absoluteSupLevel, DbGenType.Optimized)
 
@@ -109,7 +109,7 @@ class DbGen:
         counter = Counter()
         for db in self.collection_list[0: step]:
             counter += db.getUniverseSup()
-        return max(counter.values()) + 1
+        return max(counter.values())
 
     def supportLevelOptimized(self, step):
         maxTemp = max(self.optimizedMinSupLevels[step - 1], self.maxMinimal(step))
