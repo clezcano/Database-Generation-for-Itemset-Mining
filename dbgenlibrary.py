@@ -53,7 +53,12 @@ class DataBase:
         return self.itemUniverseSup
 
     def getItemsetSup(self, xitemset):  # get the absolute support of an itemset in a database
-        return reduce(add, map(lambda y: y.optimizedCardinality, filter(lambda x: xitemset.getItemSet().issubset(x.getItemSet()), self.getDataBase())))
+        if isinstance(xitemset, ItemSet):
+            return reduce(add, map(lambda y: y.optimizedCardinality, filter(lambda x: xitemset.getItemSet().issubset(x.getItemSet()), self.getDataBase())))
+        elif isinstance(xitemset, set):
+            return reduce(add, map(lambda y: y.optimizedCardinality, filter(lambda x: xitemset.issubset(x.getItemSet()), self.getDataBase())))
+        else:
+            raise Exception("Method getItemsetSup() input an undefined parameter")
 
 class DbGen:
     # collection_list = [DataBase(), DataBase(),...]
@@ -116,27 +121,24 @@ class DbGen:
         return maxTemp
 
     def maxMinimal(self, step):
-        m1 = reduce(lambda a, y: a | y, [self.powerset(itemset.getItemSet()) for itemset in self.collection_list[step - 1].getDataBase()])
-        m2 = reduce(lambda a, y: a | y, [self.powerset(itemset.getItemSet()) for itemset in self.collection_list[step].getDataBase()])
-        diff = set(m1).difference(m2)
+        m1 = set(chain.from_iterable([self.powerset(itemset.getItemSet()) for itemset in self.collection_list[step - 1].getDataBase()]))
+        m2 = set(chain.from_iterable([self.powerset(itemset.getItemSet()) for itemset in self.collection_list[step].getDataBase()]))
+        diff = [set(i) for i in m1.difference(m2)]
         return self.getMaxSupAll(self.getMinimalItemsets(diff), step)
 
     def powerset(self, itemset):  # powerset(set)
-        s = list(itemset)
-        return chain.from_iterable(combinations(s, r) for r in range(1, len(s) + 1))
+        return set(chain.from_iterable(combinations(itemset, r) for r in range(1, len(itemset) + 1)))
 
     def getMinimalItemsets(self, dbList):
-        minItemset = set()
+        minItemset = list()
         for itemset1 in dbList:
             isSuper = False
-            row1 = itemset1.getItemSet()
             for itemset2 in dbList:
-                row2 = itemset2.getItemSet()
-                if row1 > row2:
+                if itemset1 > itemset2:
                     isSuper = True
                     break
             if isSuper is False:
-                minItemset.add(row1)
+                minItemset.append(itemset1)
         return minItemset
 
     def getMaxSupAll(self, dbList, step):  # get the minimum support of all the itemset in a database DB
