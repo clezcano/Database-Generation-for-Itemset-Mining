@@ -113,7 +113,7 @@ class DbGen:
 
     def supportLevelOptimized(self, step):
         maxTemp = max(self.optimizedMinSupLevels[step - 1], self.maxMinimal(step))
-        m2sup = list({self.getItemsetSupport(itemset, step) for itemset in self.collection_list[step]})
+        m2sup = list({self.getItemsetSupport(itemset, step) for itemset in self.collection_list[step].getDataBase()})
         m2sup.sort()
         for i in m2sup:
             if i >= maxTemp:
@@ -253,9 +253,9 @@ class DbGen:
         input_item_delimeter = "-f,"
         output_item_delimeter = "-k,"
         if algorithm == DbGenType.Basic:
-            minimum_support_list = [("-s-" + str(x).strip()) for x in self.getAbsMinSupLev(DbGenType.Basic)]  # positive: percentage of transactions, negative: exact number of transactions
+            minimum_support_list = ["-s-" + str(x).strip() for x in self.getAbsMinSupLev(DbGenType.Basic)]  # positive: percentage of transactions, negative: exact number of transactions
         elif algorithm == DbGenType.Optimized:
-            minimum_support_list = [("-s-" + str(x).strip()) for x in self.getAbsMinSupLev(DbGenType.Optimized)]  # positive: percentage of transactions, negative: exact number of transactions
+            minimum_support_list = ["-s-" + str(x).strip() for x in self.getAbsMinSupLev(DbGenType.Optimized)]  # positive: percentage of transactions, negative: exact number of transactions
         targetype = "-tm"  # frequest (s) maximal (m) closed (c)
         output_format = '-v" "'  # empty support information for output result
         inputfile = file
