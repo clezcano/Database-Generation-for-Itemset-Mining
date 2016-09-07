@@ -2,12 +2,30 @@
 # Programmer: Christian Lezcano
 
 from functools import reduce
-from subprocess import check_output, CalledProcessError, STDOUT
+from subprocess import check_output, CalledProcessError
 from collections import Counter
 from enum import Enum
 from operator import add
 from itertools import chain, combinations
 import csv
+
+class InputFile:
+    def __init__(self, filename):
+        self.filename = filename
+
+    def getFileNumElements(self):
+        with open(self.filename, 'r') as f:
+            numElem = len(set(chain.from_iterable([{i.strip() for i in line.split(',')} for line in f.readlines()])))
+        f.close()
+        return numElem
+
+    def getFileMaxSup(self):
+        with open(self.filename, 'r') as f:
+            fileMaxSup = Counter()
+            for itemset in [{i.strip() for i in line.split(',')} for line in f.readlines()]:
+                fileMaxSup.update({}.fromkeys(itemset, 1))
+        f.close()
+        return max(fileMaxSup.values())
 
 class DbGenType(Enum):
     Basic = 1
@@ -54,6 +72,9 @@ class DataBase:
         for itemset in self.getDataBase():
             self.itemUniverseSup.update({}.fromkeys(itemset.getItemSet(), itemset.basicCardinality))
         return self.itemUniverseSup
+
+    def getDBElements(self):
+        return set(chain.from_iterable([itemset.getItemSet() for itemset in self.getDataBase()]))
 
     def getItemsetSup(self, xitemset):  # get the absolute support of an itemset in a database
         if isinstance(xitemset, ItemSet):
@@ -113,6 +134,9 @@ class DbGen:
         for db in self.collection_list[0: step]:
             counter += db.getUniverseSup()
         return max(counter.values())
+
+    def getNumElem(self):
+        return len(set(chain.from_iterable([db.getDBElements() for db in self.collection_list])))
 
     def supportLevelOptimized(self, step):
         maxTemp = max(self.optimizedMinSupLevels[step - 1], self.maxMinimal(step))
