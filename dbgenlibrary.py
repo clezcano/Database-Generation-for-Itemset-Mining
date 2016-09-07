@@ -12,6 +12,7 @@ import csv
 class DbGenType(Enum):
     Basic = 1
     Optimized = 2
+    Input = 3
 
 class ItemSet:
     def __init__(self):
@@ -45,6 +46,8 @@ class DataBase:
             return reduce(add, [itemset.basicCardinality for itemset in self.getDataBase()])
         elif algorithm == DbGenType.Optimized:
             return reduce(add, [itemset.optimizedCardinality for itemset in self.getDataBase()])
+        elif algorithm == DbGenType.Input:
+            return len(self.database)
 
     def getUniverseSup(self):  # Maximum of the absolute support values of all the singleton items of DB
         self.itemUniverseSup.clear()
@@ -158,6 +161,8 @@ class DbGen:
             return reduce(add, [db.size(DbGenType.Basic) for db in self.getCollections()])
         elif algorithm == DbGenType.Optimized:
             return reduce(add, [db.size(DbGenType.Optimized) for db in self.getCollections()])
+        elif algorithm == DbGenType.Input:
+            return reduce(add, [db.size(DbGenType.Input) for db in self.getCollections()])
 
     def getRelMinSupLev(self, algorithm):  # Get relative minimum support levels
         if algorithm == DbGenType.Basic:
@@ -177,7 +182,10 @@ class DbGen:
         self.collection_list.clear()
         for levelsupport in self.minimum_support_list:
             command = "apriori.exe" + " " + self.input_item_delimiter + " " + self.output_item_delimiter + " " + levelsupport + " " + self.targetype + " " + self.output_format + " " + self.inputfile + " " + self.maximalout
-            temp_collection = check_output(command).decode("utf-8").strip().split("\n")  # contains the maximal itemset list with useless space characters
+            try:
+                temp_collection = check_output(command).decode("utf-8").strip().split("\n")  # contains the maximal itemset list with useless space characters
+            except CalledProcessError as e:
+                exit("Apriori has failed running with minimum support: %s Return code: %d Output: %s" % (levelsupport, e.returncode, e.output.decode("utf-8")))
             collection = [itemset.strip() for itemset in temp_collection]  # contains a maximal collection, ex: Mi
             mc = DataBase()
             for i in collection:
@@ -219,6 +227,10 @@ class DbGen:
             for db in self.getCollections():
                 for itemset in db.getDataBase():
                     for _ in range(itemset.optimizedCardinality):
+                        print(",".join(itemset.getItemSet()))
+        elif algorithm == DbGenType.Input:
+            for db in self.getCollections():
+                for itemset in db.getDataBase():
                         print(",".join(itemset.getItemSet()))
 
     def printDBtoFile(self, fileName, algorithm):
