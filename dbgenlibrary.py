@@ -15,17 +15,19 @@ class InputFile:
 
     def getFileNumElements(self):
         with open(self.filename, 'r') as f:
-            numElem = len(set(chain.from_iterable([{i.strip() for i in line.split(',')} for line in f.readlines()])))
-        f.close()
-        return numElem
+            return len(set(chain.from_iterable([{i.strip() for i in line.split(',')} for line in f.readlines()])))
 
     def getFileMaxSup(self):
         with open(self.filename, 'r') as f:
             fileMaxSup = Counter()
             for itemset in [{i.strip() for i in line.split(',')} for line in f.readlines()]:
                 fileMaxSup.update({}.fromkeys(itemset, 1))
-        f.close()
         return max(fileMaxSup.values())
+
+    def getFileSize(self):
+        with open(self.filename, 'r') as f:
+            fileSize = len(f.readlines())
+        return fileSize
 
 class DbGenType(Enum):
     Basic = 1
@@ -139,7 +141,10 @@ class DbGen:
         return len(set(chain.from_iterable([db.getDBElements() for db in self.collection_list])))
 
     def supportLevelOptimized(self, step):
-        maxTemp = max(self.optimizedMinSupLevels[step - 1], self.maxMinimal(step))
+        maxMin = self.maxMinimal(step)
+        if maxMin == -1:
+            return self.optimizedMinSupLevels[step - 1] - 1
+        maxTemp = max(self.optimizedMinSupLevels[step - 1], maxMin)
         m2sup = list({self.getItemsetSupport(itemset, step) for itemset in self.collection_list[step].getDataBase()})
         m2sup.sort()
         for i in m2sup:
@@ -150,8 +155,11 @@ class DbGen:
     def maxMinimal(self, step):
         m1 = set(chain.from_iterable([self.powerset(itemset.getItemSet()) for itemset in self.collection_list[step - 1].getDataBase()]))
         m2 = set(chain.from_iterable([self.powerset(itemset.getItemSet()) for itemset in self.collection_list[step].getDataBase()]))
-        diff = [set(i) for i in m1.difference(m2)]
-        return self.getMaxSupAll(self.getMinimalItemsets(diff), step)
+        diff = m1.difference(m2)
+        if len(diff) > 0:
+            return self.getMaxSupAll(self.getMinimalItemsets([set(i) for i in diff]), step)
+        else:
+            return -1
 
     def powerset(self, itemset):  # powerset(set)
         return set(chain.from_iterable(combinations(itemset, r) for r in range(1, len(itemset) + 1)))
