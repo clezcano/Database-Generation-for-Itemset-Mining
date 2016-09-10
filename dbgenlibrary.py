@@ -71,7 +71,7 @@ class DataBase:
         self.itemUniverseSup.clear()
         for itemset in self.getDataBase():
             self.itemUniverseSup.update({}.fromkeys(itemset.getItemSet(), itemset.basicCardinality))
-        return self.itemUniverseSup
+        return dict(self.itemUniverseSup.most_common())
 
     def getDBElements(self):
         return set(chain.from_iterable([itemset.getItemSet() for itemset in self.getDataBase()]))
@@ -132,7 +132,7 @@ class DbGen:
     def supportLevelBasic(self, step):
         counter = Counter()
         for db in self.collection_list[0: step]:
-            counter += db.getUniverseSup()
+            counter.update(db.getUniverseSup())
         return max(counter.values())
 
     def getNumElem(self):
@@ -284,11 +284,7 @@ class DbGen:
             return False
         for i in range(self.getNumCollections()):
             A = [itemset.getItemSet() for itemset in self.collection_list[i].getDataBase()]
-            print("DB #%d input lenght: %d" % (i, len(A)))
             B = [itemset.getItemSet() for itemset in db[i].getDataBase()]
-            print("DB #%d inversed lenght: %d" % (i, len(B)))
-            print("A-B: ", [x for x in A if x not in B])
-            print("B-A: ", [y for y in B if y not in A])
             if [x for x in A if x not in B] + [y for y in B if y not in A] != []:  # if (A-B) + (B-A) != []
                 return False
         return True
