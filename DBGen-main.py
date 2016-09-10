@@ -35,7 +35,7 @@ def main():
         # startTime = time.time()
         # var.dbGenOptimized()
         # elapsedTime = time.time() - startTime
-        # print("Optimized running time : ", (elapsedTime * 1000))
+        # print("Optimized running time: ", (elapsedTime * 1000))
         # print("Optimized DB lenght : ", var.getDBsize(DbGenType.Optimized))
         # print("by DB : %d, %d, %d, %d," % (var.collection_list[0].size(DbGenType.Optimized), var.collection_list[1].size(DbGenType.Optimized), var.collection_list[2].size(DbGenType.Optimized), var.collection_list[3].size(DbGenType.Optimized)))
         # print("Optimized List of absolute minimum support levels : ", var.getAbsMinSupLev(DbGenType.Optimized))
