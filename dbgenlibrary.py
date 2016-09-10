@@ -308,3 +308,4 @@ class DbGen:
         maximalout = "-"  # "-" for standard output
         varInv = DbGen(input_item_delimeter, output_item_delimeter, minimum_support_list, targetype, output_format, inputfile, maximalout)
         return self.compareDB(varInv.getCollections())
+
