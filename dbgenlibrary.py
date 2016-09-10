@@ -1,11 +1,9 @@
 # Implementation from scratch of the algorithms presented in the paper "Distribution-Based Synthetic Database Generation Techniques for Itemset Mining" by Ganesh Ramesh, Mohammed J. Zaki and William A. Maniatty
 # Programmer: Christian Lezcano
 
-from functools import reduce
 from subprocess import check_output, CalledProcessError
 from collections import Counter
 from enum import Enum
-from operator import add
 from itertools import chain, combinations
 import csv
 
@@ -63,9 +61,9 @@ class DataBase:
 
     def size(self, algorithm):
         if algorithm == DbGenType.Basic:
-            return reduce(add, [itemset.basicCardinality for itemset in self.getDataBase()])
+            return sum([itemset.basicCardinality for itemset in self.getDataBase()])
         elif algorithm == DbGenType.Optimized:
-            return reduce(add, [itemset.optimizedCardinality for itemset in self.getDataBase()])
+            return sum([itemset.optimizedCardinality for itemset in self.getDataBase()])
         elif algorithm == DbGenType.Input:
             return len(self.database)
 
@@ -80,9 +78,9 @@ class DataBase:
 
     def getItemsetSup(self, xitemset):  # get the absolute support of an itemset in a database
         if isinstance(xitemset, ItemSet):
-            return reduce(add, map(lambda y: y.optimizedCardinality, filter(lambda x: xitemset.getItemSet().issubset(x.getItemSet()), self.getDataBase())))
+            return sum(map(lambda y: y.optimizedCardinality, filter(lambda x: xitemset.getItemSet().issubset(x.getItemSet()), self.getDataBase())))
         elif isinstance(xitemset, set):
-            return reduce(add, map(lambda y: y.optimizedCardinality, filter(lambda x: xitemset.issubset(x.getItemSet()), self.getDataBase())))
+            return sum(map(lambda y: y.optimizedCardinality, filter(lambda x: xitemset.issubset(x.getItemSet()), self.getDataBase())))
         else:
             raise Exception("Method getItemsetSup() input an undefined parameter value")
 
@@ -102,7 +100,7 @@ class DbGen:
         self.optimizedMinSupLevels = list()  # Minimum support levels of dbGenOptimized algorithm
         self.loadCollections()
         if not self.satisfyContainmentProp():
-            raise Exception("This DB does not satisfy the containment property.")
+            exit("This DB does not satisfy the containment property.")
 
     def dbGenBasic(self):
         absoluteSupLevel = 1  # Absolute support level
@@ -123,7 +121,7 @@ class DbGen:
             self.genOperator(step, absoluteSupLevel, DbGenType.Optimized)
 
     def getItemsetSupport(self, itemset, step):  # get the absolute support of an itemset in the database DB
-        return reduce(add, [db.getItemsetSup(itemset) for db in self.collection_list[0: step]])
+        return sum([db.getItemsetSup(itemset) for db in self.collection_list[0: step]])
 
     def getSupportLevel(self, step, algorithm):
         if algorithm == DbGenType.Basic:
@@ -153,11 +151,11 @@ class DbGen:
         return maxTemp
 
     def maxMinimal(self, step):
-        m1 = set(chain.from_iterable([self.powerset(itemset.getItemSet()) for itemset in self.collection_list[step - 1].getDataBase()]))
-        m2 = set(chain.from_iterable([self.powerset(itemset.getItemSet()) for itemset in self.collection_list[step].getDataBase()]))
-        diff = m1.difference(m2)
+        m1powerset = [set(i) for i in set(chain.from_iterable([self.powerset(itemset.getItemSet()) for itemset in self.collection_list[step - 1].getDataBase()]))]
+        m2powerset = [set(i) for i in set(chain.from_iterable([self.powerset(itemset.getItemSet()) for itemset in self.collection_list[step].getDataBase()]))]
+        diff = [x for x in m1powerset if x not in m2powerset]
         if len(diff) > 0:
-            return self.getMaxSupAll(self.getMinimalItemsets([set(i) for i in diff]), step)
+            return self.getMaxSupAll(self.getMinimalItemsets(diff), step)
         else:
             return -1
 
@@ -190,11 +188,11 @@ class DbGen:
 
     def getDBsize(self, algorithm):
         if algorithm == DbGenType.Basic:
-            return reduce(add, [db.size(DbGenType.Basic) for db in self.getCollections()])
+            return sum([db.size(DbGenType.Basic) for db in self.getCollections()])
         elif algorithm == DbGenType.Optimized:
-            return reduce(add, [db.size(DbGenType.Optimized) for db in self.getCollections()])
+            return sum([db.size(DbGenType.Optimized) for db in self.getCollections()])
         elif algorithm == DbGenType.Input:
-            return reduce(add, [db.size(DbGenType.Input) for db in self.getCollections()])
+            return sum([db.size(DbGenType.Input) for db in self.getCollections()])
 
     def getRelMinSupLev(self, algorithm):  # Get relative minimum support levels
         if algorithm == DbGenType.Basic:
@@ -286,13 +284,17 @@ class DbGen:
             return False
         for i in range(self.getNumCollections()):
             A = [itemset.getItemSet() for itemset in self.collection_list[i].getDataBase()]
+            print("DB #%d input lenght: %d" % (i, len(A)))
             B = [itemset.getItemSet() for itemset in db[i].getDataBase()]
+            print("DB #%d inversed lenght: %d" % (i, len(B)))
+            print("A-B: ", [x for x in A if x not in B])
+            print("B-A: ", [y for y in B if y not in A])
             if [x for x in A if x not in B] + [y for y in B if y not in A] != []:  # if (A-B) + (B-A) != []
                 return False
         return True
 
     def satisfyInverseMiningProp(self, algorithm):
-        file = "testoutput.csv"
+        file = "dbOutput.csv"
         self.printDBtoFile(file, algorithm)
         input_item_delimeter = "-f,"
         output_item_delimeter = "-k,"
@@ -305,4 +307,4 @@ class DbGen:
         inputfile = file
         maximalout = "-"  # "-" for standard output
         varInv = DbGen(input_item_delimeter, output_item_delimeter, minimum_support_list, targetype, output_format, inputfile, maximalout)
-        return True if self.compareDB(varInv.getCollections()) else False
+        return self.compareDB(varInv.getCollections())
