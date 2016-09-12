@@ -140,6 +140,7 @@ class DbGen:
 
     def supportLevelOptimized(self, step):
         maxMin = self.maxMinimal(step)
+        print("Min Step #%d is %d" % (step, maxMin))
         if maxMin == -1:
             return self.optimizedMinSupLevels[step - 1] - 1
         maxTemp = max(self.optimizedMinSupLevels[step - 1], maxMin)
@@ -154,6 +155,11 @@ class DbGen:
         m1powerset = [set(i) for i in set(chain.from_iterable([self.powerset(itemset.getItemSet()) for itemset in self.collection_list[step - 1].getDataBase()]))]
         m2powerset = [set(i) for i in set(chain.from_iterable([self.powerset(itemset.getItemSet()) for itemset in self.collection_list[step].getDataBase()]))]
         diff = [x for x in m1powerset if x not in m2powerset]
+        if step == 2:
+            print("step %d" % step)
+            print("m1p : ", m1powerset)
+            print("m2p : ", m2powerset)
+            print("diff: ", diff)
         if len(diff) > 0:
             return self.getMaxSupAll(self.getMinimalItemsets(diff), step)
         else:
