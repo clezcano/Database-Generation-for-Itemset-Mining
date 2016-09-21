@@ -40,11 +40,26 @@ def main():
         print("Optimized running time: ", (elapsedTime * 1000))
         print("Optimized DB lenght : ", var.getDBsize(DbGenType.Optimized))
         print("by DB : %d, %d, %d, %d," % (var.collection_list[0].size(DbGenType.Optimized), var.collection_list[1].size(DbGenType.Optimized), var.collection_list[2].size(DbGenType.Optimized), var.collection_list[3].size(DbGenType.Optimized)))
-        print("Optimized List of absolute minimum support levels : ", var.getAbsMinSupLev(DbGenType.Optimized))
+        # print("Optimized List of absolute minimum support levels : ", var.getAbsMinSupLev(DbGenType.Optimized))
         print("Optimized List of relative minimum support levels : ", var.getRelMinSupLev(DbGenType.Optimized))
         print("Optimized Satisfy the inverse mining property? :", var.satisfyInverseMiningProp(DbGenType.Optimized))
         print("DBGenOptimized database :")
         var.printDB(DbGenType.Optimized)
+
+        print("dbGenHypergraph")
+        print("Hypergraph Collections DB input lenght : ", var.getDBsize(DbGenType.Input))
+        startTime = time.time()
+        var.dbGenHypergraph()
+        elapsedTime = time.time() - startTime
+        print("Hypergraph running time: ", (elapsedTime * 1000))
+        print("Hypergraph DB lenght : ", var.getDBsize(DbGenType.Hypergraph))
+        print("by DB : %d, %d, %d, %d," % (var.collection_list[0].size(DbGenType.Hypergraph), var.collection_list[1].size(DbGenType.Hypergraph), var.collection_list[2].size(DbGenType.Hypergraph), var.collection_list[3].size(DbGenType.Hypergraph)))
+        print("Hypergraph List of absolute minimum support levels : ", var.getAbsMinSupLev(DbGenType.Hypergraph))
+        print("Hypergraph List of relative minimum support levels : ", var.getRelMinSupLev(DbGenType.Hypergraph))
+        print("Hypergraph Satisfy the inverse mining property? :", var.satisfyInverseMiningProp(DbGenType.Hypergraph))
+        print("DBGenHypergraph database :")
+        var.printDB(DbGenType.Hypergraph)
+        print("Optimized and Hypergraph are equal? : ", var.equalDB())
 
 if __name__ == "__main__":
         main()

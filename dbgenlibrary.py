@@ -157,7 +157,7 @@ class DbGen:
         return max(counter.values())
 
     def supportLevelOptimized(self, step):
-        maxMin = self.maxMinimal(step)
+        maxMin = self.getMaxMinimal(step, DbGenType.Optimized)
         if maxMin == -1:
             return self.optimizedMinSupLevels[step - 1] - 1
         maxTemp = max(self.optimizedMinSupLevels[step - 1], maxMin)
@@ -169,7 +169,7 @@ class DbGen:
         return maxTemp
 
     def supportLevelHypergraph(self, step):
-        maxMin = self.maxMinimal(step)
+        maxMin = self.getMaxMinimal(step, DbGenType.Hypergraph)
         if maxMin == -1:
             return self.hypergraphMinSupLevels[step - 1] - 1
         maxTemp = max(self.hypergraphMinSupLevels[step - 1], maxMin)
@@ -194,18 +194,22 @@ class DbGen:
         m2powerset = [set(i) for i in set(chain.from_iterable([self.powerset(itemset.getItemSet()) for itemset in self.collection_list[step].getDataBase()]))]
         diff = [x for x in m1powerset if x not in m2powerset]
         if len(diff) > 0:
-            return self.getMaxSupAll(self.getMinimalItemsets(diff), step)
+            return self.getMaxSupAll(self.getMinimalItemsets(diff), step, DbGenType.Optimized)
         else:
             return -1
 
     def maxMinimalHypergraph(self, step):
         h = hypergraph()
-        for i in [set(i) for i in set(chain.from_iterable([self.powerset(itemset.getItemSet()) for itemset in self.collection_list[step].getDataBase()]))]:
+        universeElements = self.getElements()
+        for i in [universeElements.difference(itemset.getItemSet()) for itemset in self.collection_list[step].getDataBase()]:
             h.added(i)
-        minTransversals = h.transv()
-        m1powerset = [set(i) for i in set(chain.from_iterable([self.powerset(itemset.getItemSet()) for itemset in self.collection_list[step - 1].getDataBase()]))]
-        minimals = [y for y in minTransversals if y in m1powerset]
-        return self.getMaxSupAll(minimals, step)
+        minTransv = h.transv().hyedges
+        previousDB = [itemset.getItemSet() for itemset in self.collection_list[step - 1].getDataBase()]
+        minimals = [x for x in minTransv for y in previousDB if x.issubset(y)]
+        if len(minimals) > 0:
+            return self.getMaxSupAll(minimals, step, DbGenType.Hypergraph)
+        else:
+            return -1
 
     def powerset(self, itemset):  # powerset(set)
         return set(chain.from_iterable(combinations(itemset, r) for r in range(1, len(itemset) + 1)))
@@ -222,8 +226,11 @@ class DbGen:
                 minItemset.append(itemset1)
         return minItemset
 
-    def getMaxSupAll(self, dbList, step):  # get the minimum support of all the itemset in a database DB
-        return max([self.getItemsetSupport(itemset, step, DbGenType.Optimized) for itemset in dbList])
+    def getMaxSupAll(self, dbList, step, algorithm):  # get the minimum support of all the itemset in a database DB
+        if algorithm == DbGenType.Optimized:
+            return max([self.getItemsetSupport(itemset, step, DbGenType.Optimized) for itemset in dbList])
+        if algorithm == DbGenType.Hypergraph:
+            return max([self.getItemsetSupport(itemset, step, DbGenType.Hypergraph) for itemset in dbList])
 
     def getElements(self):
         return set(chain.from_iterable([db.getDBElements() for db in self.collection_list]))
@@ -239,6 +246,10 @@ class DbGen:
             for itemset in self.collection_list[step].getDataBase():
                 itemsetsup = self.getItemsetSupport(itemset, step, DbGenType.Optimized)
                 itemset.optimizedCardinality = (absoluteSupLevel - itemsetsup) if itemsetsup < absoluteSupLevel else 0
+        elif algorithm == DbGenType.Hypergraph:
+            for itemset in self.collection_list[step].getDataBase():
+                itemsetsup = self.getItemsetSupport(itemset, step, DbGenType.Hypergraph)
+                itemset.hypergraphCardinality = (absoluteSupLevel - itemsetsup) if itemsetsup < absoluteSupLevel else 0
 
     def getDBsize(self, algorithm):
         if algorithm == DbGenType.Basic:
@@ -252,17 +263,22 @@ class DbGen:
 
     def getRelMinSupLev(self, algorithm):  # Get relative minimum support levels
         if algorithm == DbGenType.Basic:
-            BasicDBsize = self.getDBsize(DbGenType.Basic)
-            return [minsup / BasicDBsize for minsup in self.basicMinSupLevels]
+            basicDBsize = self.getDBsize(DbGenType.Basic)
+            return [minsup / basicDBsize for minsup in self.basicMinSupLevels]
         elif algorithm == DbGenType.Optimized:
-            OptimizedDBsize = self.getDBsize(DbGenType.Optimized)
-            return [minsup / OptimizedDBsize for minsup in self.optimizedMinSupLevels]
+            optimizedDBsize = self.getDBsize(DbGenType.Optimized)
+            return [minsup / optimizedDBsize for minsup in self.optimizedMinSupLevels]
+        elif algorithm == DbGenType.Hypergraph:
+            hypergraphDBsize = self.getDBsize(DbGenType.Hypergraph)
+            return [minsup / hypergraphDBsize for minsup in self.optimizedMinSupLevels]
 
     def getAbsMinSupLev(self, algorithm):  # Get absolute minimum support levels
         if algorithm == DbGenType.Basic:
             return self.basicMinSupLevels
         elif algorithm == DbGenType.Optimized:
             return self.optimizedMinSupLevels
+        elif algorithm == DbGenType.Hypergraph:
+            return self.hypergraphMinSupLevels
 
     def loadCollections(self):
         self.collection_list.clear()
@@ -314,6 +330,11 @@ class DbGen:
                 for itemset in db.getDataBase():
                     for _ in range(itemset.optimizedCardinality):
                         print(",".join(itemset.getItemSet()))
+        elif algorithm == DbGenType.Hypergraph:
+            for db in self.getCollections():
+                for itemset in db.getDataBase():
+                    for _ in range(itemset.hypergraphCardinality):
+                        print(",".join(itemset.getItemSet()))
         elif algorithm == DbGenType.Input:
             for db in self.getCollections():
                 for itemset in db.getDataBase():
@@ -331,6 +352,11 @@ class DbGen:
             for db in self.getCollections():
                 for itemset in db.getDataBase():
                     for _ in range(itemset.optimizedCardinality):
+                        csvWriter.writerow(itemset.getItemSet())
+        elif algorithm == DbGenType.Hypergraph:
+            for db in self.getCollections():
+                for itemset in db.getDataBase():
+                    for _ in range(itemset.hypergraphCardinality):
                         csvWriter.writerow(itemset.getItemSet())
         csvFile.close()
 
@@ -354,10 +380,21 @@ class DbGen:
             minimum_support_list = ["-s-" + str(x).strip() for x in self.getAbsMinSupLev(DbGenType.Basic)]  # positive: percentage of transactions, negative: exact number of transactions
         elif algorithm == DbGenType.Optimized:
             minimum_support_list = ["-s-" + str(x).strip() for x in self.getAbsMinSupLev(DbGenType.Optimized)]  # positive: percentage of transactions, negative: exact number of transactions
+        elif algorithm == DbGenType.Hypergraph:
+            minimum_support_list = ["-s-" + str(x).strip() for x in self.getAbsMinSupLev(DbGenType.Hypergraph)]  # positive: percentage of transactions, negative: exact number of transactions
         targetype = "-tm"  # frequest (s) maximal (m) closed (c)
         output_format = '-v" "'  # empty support information for output result
         inputfile = file
         maximalout = "-"  # "-" for standard output
         varInv = DbGen(input_item_delimeter, output_item_delimeter, minimum_support_list, targetype, output_format, inputfile, maximalout)
         return self.compareDB(varInv.getCollections())
+
+    def equalDB(self):
+        for db in self.getCollections():
+            db1 = [itemset.optimizedCardinality for itemset in db.getDataBase()]
+            db2 = [itemset.hypergraphCardinality for itemset in db.getDataBase()]
+            if db1 != db2:
+                return False
+        return True
+
 
