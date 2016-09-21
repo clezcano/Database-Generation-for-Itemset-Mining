@@ -175,8 +175,11 @@ if __name__ == "__main__":
     #
     # h.added(set(['A','B','C']))
     # h.added(set(['B','C','D']))
-    h.added(set(['1', '2', '4', '5']))
-    h.added(set(['1', '2', '3', '5']))
+    #h.carrier = {'1', '2', '3', '4', '5'}
+    h.added({'1', '2', '4', '5'})
+    h.added({'1', '2', '3', '5'})
+    # h.added(set(['3']))
+    # h.added(set(['4']))
     # print("h has 8 hyedges on A, B, C, D")
     print("h has 2 hyedges on 1, 2, 3, 4, 5")
     print(h.carrier)
@@ -190,7 +193,7 @@ if __name__ == "__main__":
 
     # h.added(set(['A','D']))
 
-    h.simplify()
+    #h.simplify()
 #    h.simplify({'A':['B','C']})
 
     # print("h modified: added AD and simplified:")
