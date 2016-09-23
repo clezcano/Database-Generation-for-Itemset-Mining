@@ -24,3 +24,16 @@ def main():
 if __name__ == "__main__":
     main()
 
+#
+# def supportLevelOptimized(self, step):
+#     maxMin = self.getMaxMinimal(step, DbGenType.Optimized)
+#     if maxMin == -1:
+#         return self.optimizedMinSupLevels[step - 1] - 1
+#     maxTemp = max(self.optimizedMinSupLevels[step - 1], maxMin)
+#     m2sup = list({self.getItemsetSupport(itemset, step, DbGenType.Optimized) for itemset in
+#                   self.collection_list[step].getDataBase()})
+#     m2sup.sort()
+#     for i in m2sup:
+#         if i >= maxTemp:
+#             return i
+#     return maxTemp

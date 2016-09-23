@@ -9,17 +9,18 @@ from hypergraph import *
 import csv
 
 class InputFile:
-    def __init__(self, filename):
+    def __init__(self, filename, delimeter):
         self.filename = filename
+        self.delimeter = delimeter
 
     def getFileNumElements(self):
         with open(self.filename, 'r') as f:
-            return len(set(chain.from_iterable([{i.strip() for i in line.split(',')} for line in f.readlines()])))
+            return len(set(chain.from_iterable([{i.strip() for i in line.strip().split(self.delimeter)} for line in f.readlines()])))
 
     def getFileMaxSup(self):
         with open(self.filename, 'r') as f:
             fileMaxSup = Counter()
-            for itemset in [{i.strip() for i in line.split(',')} for line in f.readlines()]:
+            for itemset in [{i.strip() for i in line.strip().split(self.delimeter)} for line in f.readlines()]:
                 fileMaxSup.update({}.fromkeys(itemset, 1))
         return max(fileMaxSup.values())
 
