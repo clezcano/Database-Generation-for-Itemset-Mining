@@ -242,7 +242,8 @@ class DbGen:
     def genOperator(self, step, absoluteSupLevel, algorithm):
         if algorithm == DbGenType.Basic:
             for itemset in self.collection_list[step].getDataBase():
-                itemset.basicCardinality = absoluteSupLevel
+                itemsetsup = self.getItemsetSupport(itemset, step, DbGenType.Optimized)
+                itemset.basicCardinality = (absoluteSupLevel - itemsetsup) if itemsetsup < absoluteSupLevel else 0
         elif algorithm == DbGenType.Optimized:
             for itemset in self.collection_list[step].getDataBase():
                 itemsetsup = self.getItemsetSupport(itemset, step, DbGenType.Optimized)
@@ -251,6 +252,19 @@ class DbGen:
             for itemset in self.collection_list[step].getDataBase():
                 itemsetsup = self.getItemsetSupport(itemset, step, DbGenType.Hypergraph)
                 itemset.hypergraphCardinality = (absoluteSupLevel - itemsetsup) if itemsetsup < absoluteSupLevel else 0
+
+    # def genOperator(self, step, absoluteSupLevel, algorithm):
+    #     if algorithm == DbGenType.Basic:
+    #         for itemset in self.collection_list[step].getDataBase():
+    #             itemset.basicCardinality = absoluteSupLevel
+    #     elif algorithm == DbGenType.Optimized:
+    #         for itemset in self.collection_list[step].getDataBase():
+    #             itemsetsup = self.getItemsetSupport(itemset, step, DbGenType.Optimized)
+    #             itemset.optimizedCardinality = (absoluteSupLevel - itemsetsup) if itemsetsup < absoluteSupLevel else 0
+    #     elif algorithm == DbGenType.Hypergraph:
+    #         for itemset in self.collection_list[step].getDataBase():
+    #             itemsetsup = self.getItemsetSupport(itemset, step, DbGenType.Hypergraph)
+    #             itemset.hypergraphCardinality = (absoluteSupLevel - itemsetsup) if itemsetsup < absoluteSupLevel else 0
 
     def getDBsize(self, algorithm):
         if algorithm == DbGenType.Basic:
