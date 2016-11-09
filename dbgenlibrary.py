@@ -26,8 +26,7 @@ class InputFile:
 
     def getFileSize(self):
         with open(self.filename, 'r') as f:
-            fileSize = len(f.readlines())
-        return fileSize
+            return len(f.readlines())
 
 class DbGenType(Enum):
     Input = 1
@@ -81,10 +80,14 @@ class DataBase:
         elif algorithm == DbGenType.Hypergraph:
             return sum([itemset.hypergraph_cardinality for itemset in self.getDataBase()])
 
-    def getUniverseSup(self):  # Maximum of the absolute support values of all the singleton items of DB
+    def getUniverseSup(self, algorithm):  # Maximum of the absolute support values of all the singleton items of DB
         self.itemUniverseSup.clear()
-        for itemset in self.getDataBase():
-            self.itemUniverseSup.update({}.fromkeys(itemset.getItemSet(), itemset.basic_cardinality))
+        if algorithm == DbGenType.Basic:
+            for itemset in self.getDataBase():
+                self.itemUniverseSup.update({}.fromkeys(itemset.getItemSet(), itemset.basic_cardinality))
+        elif algorithm == DbGenType.BasicOptimized:
+            for itemset in self.getDataBase():
+                self.itemUniverseSup.update({}.fromkeys(itemset.getItemSet(), itemset.basicOptimized_cardinality))
         return dict(self.itemUniverseSup.most_common())
 
     def getDBElements(self):
@@ -129,12 +132,45 @@ class DbGen:
         self.basic_MinSupLevels = list()  # Minimum support levels of dbGenBasic algorithm
         self.basicOpt_MinSupLevels = list()  # Minimum support levels of dbGenBasic algorithm
         self.gamma_MinSupLevels = list()  # Minimum support levels of dbGenOptimized algorithm
-        self.gammaOpt_dMinSupLevels = list()  # Minimum support levels of dbGenOptimized algorithm
+        self.gammaOpt_MinSupLevels = list()  # Minimum support levels of dbGenOptimized algorithm
         self.hypergraph_MinSupLevels = list()  # Minimum support levels of dbGenHypergraph algorithm
         self.loadCollections()
         self.elements = self.getElements()  # Universe singleton elements
         if not self.satisfyContainmentProp():
             exit("This DB does not satisfy the containment property.")
+
+    def loadCollections(self):
+        self.collection_list.clear()
+        for levelsupport in self.minimum_support_list:
+            command = "apriori.exe" + " " + self.input_item_delimiter + " " + self.output_item_delimiter + " " + levelsupport + " " + self.targetype + " " + self.output_format + " " + self.inputfile + " " + self.maximalout
+            try:
+                temp_collection = check_output(command).decode("utf-8").strip().split("\n")  # contains the maximal itemset list with useless space characters
+            except CalledProcessError as e:
+                exit("Apriori has failed running with minimum support: %s Return code: %d Output: %s" % (levelsupport, e.returncode, e.output.decode("utf-8")))
+            collection = [itemset.strip() for itemset in temp_collection]  # contains a maximal collection, ex: Mi
+            mc = DataBase()
+            for i in collection:
+                itemset = ItemSet()
+                for item in i.split(","):
+                    itemset.add(item)
+                mc.append(itemset)
+            self.collection_list.append(mc)
+
+    def satisfyContainmentProp(self):  # check if the maximal collections satisfy the containment property. Ex: Mk [ Mk-1 [ ... [ M2 [ M1
+        numberCollections = self.getNumCollections()
+        if numberCollections == 1:
+            return True
+        for i in range(numberCollections - 2):
+            j = i + 1
+            for itemset2 in self.collection_list[j].getDataBase():
+                isSubset = False
+                for itemset1 in self.collection_list[i].getDataBase():
+                    if itemset2.getItemSet().issubset(itemset1.getItemSet()):
+                        isSubset = True
+                        break
+                if not isSubset:
+                    return False
+        return True
 
     def dbGenBasic(self):
         absoluteSupLevel = 1  # Absolute support level
@@ -165,12 +201,12 @@ class DbGen:
 
     def dbGenGammaOptimized(self):
         absoluteSupLevel = 1  # Absolute support level
-        self.gammaOpt_dMinSupLevels.clear()
-        self.gammaOpt_dMinSupLevels.append(absoluteSupLevel)
+        self.gammaOpt_MinSupLevels.clear()
+        self.gammaOpt_MinSupLevels.append(absoluteSupLevel)
         for step in range(1, self.getNumCollections()):  # M1 saved at 0 zero, M2 at 1 one, ...
             absoluteSupLevel = self.getSupportLevel(step, DbGenType.GammaOptimized) + 1
             self.genOperator(step, absoluteSupLevel, DbGenType.GammaOptimized)
-            self.gammaOpt_dMinSupLevels.append(absoluteSupLevel)
+            self.gammaOpt_MinSupLevels.append(absoluteSupLevel)
 
     def dbGenHypergraph(self):
         absoluteSupLevel = 1  # Absolute support level
@@ -183,9 +219,9 @@ class DbGen:
 
     def getSupportLevel(self, step, algorithm):
         if algorithm == DbGenType.Basic:
-            return self.supportLevelBasic(step)
+            return self.supportLevelBasic(step, DbGenType.Basic)
         elif algorithm == DbGenType.BasicOptimized:  # BasicOptimized uses the same upper limit as Basic
-            return self.supportLevelBasic(step)
+            return self.supportLevelBasic(step, DbGenType.BasicOptimized)
         elif algorithm == DbGenType.Gamma:
             return self.supportLevelGamma(step)
         elif algorithm == DbGenType.GammaOptimized:
@@ -193,10 +229,10 @@ class DbGen:
         elif algorithm == DbGenType.Hypergraph:
             return self.supportLevelHypergraph(step)
 
-    def supportLevelBasic(self, step):
+    def supportLevelBasic(self, step, algorithm):
         counter = Counter()
         for db in self.collection_list[0: step]:
-            counter.update(db.getUniverseSup())
+            counter.update(db.getUniverseSup(algorithm))
         return max(counter.values())
 
     def supportLevelGamma(self, step):
@@ -214,8 +250,8 @@ class DbGen:
     def supportLevelGammaOptimized(self, step):
         maxMin = self.getMaxMinimal(step, DbGenType.GammaOptimized)
         if maxMin == -1: # it means M_step-1 == M_step
-            return self.gammaOpt_dMinSupLevels[step - 1] - 1
-        return max(self.gammaOpt_dMinSupLevels[step - 1], maxMin)
+            return self.gammaOpt_MinSupLevels[step - 1] - 1
+        return max(self.gammaOpt_MinSupLevels[step - 1], maxMin)
 
     def supportLevelHypergraph(self, step):
         maxMin = self.getMaxMinimal(step, DbGenType.Hypergraph)
@@ -338,19 +374,19 @@ class DbGen:
     def getRelMinSupLev(self, algorithm):  # Get relative minimum support levels
         if algorithm == DbGenType.Basic:
             DBsize = self.getDBsize(DbGenType.Basic)
-            return [minsup / DBsize for minsup in self.basic_MinSupLevels]
+            return [(minsup / DBsize) * 100 for minsup in self.basic_MinSupLevels]
         if algorithm == DbGenType.BasicOptimized:
             DBsize = self.getDBsize(DbGenType.BasicOptimized)
-            return [minsup / DBsize for minsup in self.basicOpt_MinSupLevels]
+            return [(minsup / DBsize) * 100 for minsup in self.basicOpt_MinSupLevels]
         elif algorithm == DbGenType.Gamma:
             DBsize = self.getDBsize(DbGenType.Gamma)
-            return [minsup / DBsize for minsup in self.gamma_MinSupLevels]
+            return [(minsup / DBsize) * 100 for minsup in self.gamma_MinSupLevels]
         elif algorithm == DbGenType.GammaOptimized:
             DBsize = self.getDBsize(DbGenType.GammaOptimized)
-            return [minsup / DBsize for minsup in self.gammaOpt_dMinSupLevels]
+            return [(minsup / DBsize) * 100 for minsup in self.gammaOpt_MinSupLevels]
         elif algorithm == DbGenType.Hypergraph:
             DBsize = self.getDBsize(DbGenType.Hypergraph)
-            return [minsup / DBsize for minsup in self.hypergraph_MinSupLevels]
+            return [(minsup / DBsize) * 100 for minsup in self.hypergraph_MinSupLevels]
 
     def getAbsMinSupLev(self, algorithm):  # Get absolute minimum support levels
         if algorithm == DbGenType.Basic:
@@ -360,48 +396,15 @@ class DbGen:
         elif algorithm == DbGenType.Gamma:
             return self.gamma_MinSupLevels
         elif algorithm == DbGenType.GammaOptimized:
-            return self.gammaOpt_dMinSupLevels
+            return self.gammaOpt_MinSupLevels
         elif algorithm == DbGenType.Hypergraph:
             return self.hypergraph_MinSupLevels
-
-    def loadCollections(self):
-        self.collection_list.clear()
-        for levelsupport in self.minimum_support_list:
-            command = "apriori.exe" + " " + self.input_item_delimiter + " " + self.output_item_delimiter + " " + levelsupport + " " + self.targetype + " " + self.output_format + " " + self.inputfile + " " + self.maximalout
-            try:
-                temp_collection = check_output(command).decode("utf-8").strip().split("\n")  # contains the maximal itemset list with useless space characters
-            except CalledProcessError as e:
-                exit("Apriori has failed running with minimum support: %s Return code: %d Output: %s" % (levelsupport, e.returncode, e.output.decode("utf-8")))
-            collection = [itemset.strip() for itemset in temp_collection]  # contains a maximal collection, ex: Mi
-            mc = DataBase()
-            for i in collection:
-                itemset = ItemSet()
-                for item in i.split(","):
-                    itemset.add(item)
-                mc.append(itemset)
-            self.collection_list.append(mc)
 
     def getCollections(self):
         return self.collection_list
 
     def getNumCollections(self):
         return len(self.collection_list)
-
-    def satisfyContainmentProp(self):  # check if the maximal collections satisfy the containment property. Ex: Mk [ Mk-1 [ ... [ M2 [ M1
-        numberCollections = self.getNumCollections()
-        if numberCollections == 1:
-            return True
-        for i in range(numberCollections - 2):
-            j = i + 1
-            for itemset2 in self.collection_list[j].getDataBase():
-                isSubset = False
-                for itemset1 in self.collection_list[i].getDataBase():
-                    if itemset2.getItemSet().issubset(itemset1.getItemSet()):
-                        isSubset = True
-                        break
-                if not isSubset:
-                    return False
-        return True
 
     def printDB(self, algorithm):
         if algorithm == DbGenType.Input:

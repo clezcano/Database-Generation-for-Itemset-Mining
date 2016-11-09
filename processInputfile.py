@@ -10,30 +10,19 @@ def deleteFirstCol():
     f.close()
     csvFile.close()
 
-def maxsupfile(filename):
+def maxsupfile(filename, input_item_delimeter):
     with open(filename, 'r') as f:
         fileMaxSup = Counter()
-        for itemset in [{i.strip() for i in line.split(',')} for line in f.readlines()]:
+        for itemset in [{i.strip() for i in line.strip().split(input_item_delimeter)} for line in f.readlines()]:
             fileMaxSup.update({}.fromkeys(itemset, 1))
     print("Elements support : ", fileMaxSup.most_common())
     return max(fileMaxSup.values())
 
 def main():
-    print("Singleton Maximum support for file %s : is %d" % ("test1.tab", maxsupfile("test1.tab")))
+    file = "dataset-93371.csv"
+    #input_item_delimeter = ','
+    input_item_delimeter = ' '
+    print("Singleton Maximum support for file %s : is %d" % (file, maxsupfile(file, input_item_delimeter)))
 
 if __name__ == "__main__":
     main()
-
-#
-# def supportLevelOptimized(self, step):
-#     maxMin = self.getMaxMinimal(step, DbGenType.Optimized)
-#     if maxMin == -1:
-#         return self.optimizedMinSupLevels[step - 1] - 1
-#     maxTemp = max(self.optimizedMinSupLevels[step - 1], maxMin)
-#     m2sup = list({self.getItemsetSupport(itemset, step, DbGenType.Optimized) for itemset in
-#                   self.collection_list[step].getDataBase()})
-#     m2sup.sort()
-#     for i in m2sup:
-#         if i >= maxTemp:
-#             return i
-#     return maxTemp
