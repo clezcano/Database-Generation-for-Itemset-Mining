@@ -2,6 +2,7 @@
 # Programmer: Christian Lezcano
 
 from subprocess import check_output, CalledProcessError
+from sys import platform
 from collections import Counter
 from enum import Enum
 from itertools import chain, combinations
@@ -142,9 +143,13 @@ class DbGen:
     def loadCollections(self):
         self.collection_list.clear()
         for levelsupport in self.minimum_support_list:
-            command = "apriori.exe" + " " + self.input_item_delimiter + " " + self.output_item_delimiter + " " + levelsupport + " " + self.targetype + " " + self.output_format + " " + self.inputfile + " " + self.maximalout
             try:
-                temp_collection = check_output(command).decode("utf-8").strip().split("\n")  # contains the maximal itemset list with useless space characters
+                if platform == "win32":
+                    command = "apriori.exe" + " " + self.input_item_delimiter + " " + self.output_item_delimiter + " " + levelsupport + " " + self.targetype + " " + self.output_format + " " + self.inputfile + " " + self.maximalout
+                    temp_collection = check_output(command).decode("utf-8").strip().split("\n")  # contains the maximal itemset list with useless space characters
+                elif platform == "linux" or platform == "linux2":
+                    command = "./apriori" + " " + self.input_item_delimiter + " " + self.output_item_delimiter + " " + levelsupport + " " + self.targetype + " " + self.output_format + " " + self.inputfile + " " + self.maximalout
+                    temp_collection = check_output(command, shell=True).decode("utf-8").strip().split("\n")  # contains the maximal itemset list with useless space characters
             except CalledProcessError as e:
                 exit("Apriori has failed running with minimum support: %s Return code: %d Output: %s" % (levelsupport, e.returncode, e.output.decode("utf-8")))
             collection = [itemset.strip() for itemset in temp_collection]  # contains a maximal collection, ex: Mi
