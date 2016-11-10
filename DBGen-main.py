@@ -11,20 +11,20 @@ def main():
         # apriori parameter settings http://www.borgelt.net/doc/apriori/apriori.html
         # Format: apriori [options] infile [outfile]
         # Example: apriori.exe -f, -k, -s2 -tm groceries.csv -
-        input_item_delimeter = "-f,"
-        # input_item_delimeter = '-f" "'
+        # input_item_delimeter = "-f,"
+        input_item_delimeter = '-f" "'
         output_item_delimeter = "-k,"
         minimum_support_list = ["-s" + str(x).strip() for x in [2, 5, 7, 9]] # positive: percentage of transactions, negative: exact number of transactions
         targetype = "-tm"  # frequest (s) maximal (m) closed (c)
         output_format = '-v" "'  # empty support information for output result
-        inputfile = "dataset-1000.csv"
+        # inputfile = "dataset-1000.csv"
         # inputfile = "dataset-5000.csv"
         # inputfile = "dataset-20000.csv"
         # inputfile = "dataset-75000.csv"
         # inputfile = "dataset-88162.csv"
         # inputfile = "dataset-93371.csv"  # "groceries.csv"
         # inputfile = "dataset-100000.csv"
-        # inputfile = "dataset-112018.csv"
+        inputfile = "dataset-112018.csv"
         # inputfile = "dataset-450624.csv"
         maximalout = "-"  # "-" for standard output
 
