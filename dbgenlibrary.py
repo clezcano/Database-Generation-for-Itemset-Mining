@@ -15,6 +15,7 @@ class InputFile:
         self.delimeter = delimeter
 
     def getFileNumElements(self):
+        print("escape: %s" % self.delimeter)
         with open(self.filename, 'r') as f:
             return len(set(chain.from_iterable([{i.strip() for i in line.strip().split(self.delimeter)} for line in f.readlines()])))
 
@@ -152,7 +153,7 @@ class DbGen:
                     command = "./eclat" + " " + self.input_item_delimiter + " " + self.output_item_delimiter + " " + levelsupport + " " + self.targetype + " " + self.output_format + " " + self.inputfile + " " + self.maximalout
                     temp_collection = check_output(command, shell=True).decode("utf-8").strip().split("\n")  # contains the maximal itemset list with useless space characters
             except CalledProcessError as e:
-                exit("Apriori has failed running with minimum support: %s Return code: %d Output: %s" % (levelsupport, e.returncode, e.output.decode("utf-8")))
+                exit("Eclat has failed running with minimum support: %s Return code: %d Output: %s" % (levelsupport, e.returncode, e.output.decode("utf-8")))
             collection = [itemset.strip() for itemset in temp_collection]  # contains a maximal collection, ex: Mi
             mc = DataBase()
             for i in collection:
