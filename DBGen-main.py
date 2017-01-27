@@ -12,33 +12,47 @@ def main():
         # Format: apriori [options] infile [outfile]
         # Example: apriori.exe -f, -k, -s2 -tm groceries.csv -
         delimeter = " "
-        # delimeter = "\" \""
-        # delimeter = ','
-        input_item_delimeter = '-f' + delimeter + ''
+        # delimeter = ","
+        input_item_delimeter = '-f"' + delimeter + '"'
         output_item_delimeter = "-k,"
         # minimum_support_list = ["-s" + str(x).strip() for x in [2, 5, 7, 9]] # positive: percentage of transactions, negative: exact number of transactions
         minimum_support_list = ["-s" + str(x).strip() for x in [40, 50, 70, 90]]  # positive: percentage of transactions, negative: exact number of transactions
         targetype = "-tm"  # frequest (s) maximal (m) closed (c)
         output_format = '-v" "'  # empty support information for output result
-        inputfile = "dataset-246.csv"
+        # inputfile = "dataset-246.csv"
+        # inputfile = "dataset-377.csv"
         # inputfile = "dataset-1000.csv"
+        # inputfile = "dataset-3196.csv"
+        # inputfile = "dataset-4141.csv"
         # inputfile = "dataset-5000.csv"
+        # inputfile = "dataset-8124.csv"
         # inputfile = "dataset-20000.csv"
+        # inputfile = "dataset-49046v2.csv"
+        # inputfile = "dataset-59602.csv"
+        # inputfile = "dataset-67557.csv"
         # inputfile = "dataset-75000.csv"
+        # inputfile = "dataset-77512.csv"
         # inputfile = "dataset-88162.csv"
-        # inputfile = "dataset-93371.csv"  # "groceries.csv"
-        # inputfile = "dataset-112018.csv"
-        # inputfile = "dataset-450624.csv"
+        # inputfile = "dataset-245057.csv"
+        # inputfile = "dataset-340183.csv"
+        # inputfile = "dataset-541909.csv"
+        # inputfile = "dataset-574913.csv"
+        # inputfile = "dataset-990002.csv"  # "groceries.csv"
+        # inputfile = "dataset-1000000v1.csv"
+        # inputfile = "dataset-1000000v2.csv"
+        # inputfile = "dataset-1000000v3.csv"
+        # inputfile = "dataset-1040000.csv"
+        # inputfile = "dataset-1112949.csv"
+        inputfile = "dataset-1692082.csv"
         #inputfile = "dataset-245057.csv"
         maximalout = "-"  # "-" for standard output
 
-        # delimeter = ","
         dataset = InputFile(inputfile, delimeter)
-        print("File: %s Number of elements: %d" % (inputfile, dataset.getFileNumElements()))
-        var = DbGen(input_item_delimeter, output_item_delimeter, minimum_support_list, targetype, output_format, inputfile, maximalout)
-        print("Input DB Number of elements : %d" % var.getNumElements())
-        print("Input-Collections DB input lenght : ", var.getDBsize(DbGenType.Input))
-        print("by DB : %d, %d, %d, %d," % (var.collection_list[0].size(DbGenType.Input), var.collection_list[1].size(DbGenType.Input), var.collection_list[2].size(DbGenType.Input), var.collection_list[3].size(DbGenType.Input)))
+        print("File name: %s DataFile size: %d Number of elements: %d maximun support:  %d maximun support percentage: %.15f " % (inputfile, dataset.getFileSize(), dataset.getFileNumElements(), dataset.getFileMaxSup(), (dataset.getFileMaxSup()/dataset.getFileSize()) * 100))
+        # var = DbGen(input_item_delimeter, output_item_delimeter, minimum_support_list, targetype, output_format, inputfile, maximalout)
+        # print("Input DB Number of elements : %d" % var.getNumElements())
+        # print("Input-Collections DB input lenght : ", var.getDBsize(DbGenType.Input))
+        # print("by DB : %d, %d, %d, %d," % (var.collection_list[0].size(DbGenType.Input), var.collection_list[1].size(DbGenType.Input), var.collection_list[2].size(DbGenType.Input), var.collection_list[3].size(DbGenType.Input)))
 
         # startTime = time.time()
         # var.dbGenBasic()

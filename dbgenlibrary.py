@@ -24,6 +24,7 @@ class InputFile:
             fileMaxSup = Counter()
             for itemset in [{i.strip() for i in line.strip().split(self.delimeter)} for line in f.readlines()]:
                 fileMaxSup.update({}.fromkeys(itemset, 1))
+        print(fileMaxSup)
         return max(fileMaxSup.values())
 
     def getFileSize(self):
