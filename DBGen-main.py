@@ -27,6 +27,7 @@ def main():
         # inputfile = "dataset-5000.csv"
         # inputfile = "dataset-8124.csv"
         # inputfile = "dataset-20000.csv"
+        # inputfile = "dataset-49046v1.csv"
         # inputfile = "dataset-49046v2.csv"
         # inputfile = "dataset-59602.csv"
         # inputfile = "dataset-67557.csv"
@@ -48,7 +49,9 @@ def main():
         maximalout = "-"  # "-" for standard output
 
         dataset = InputFile(inputfile, delimeter)
-        print("File name: %s DataFile size: %d Number of elements: %d maximun support:  %d maximun support percentage: %.15f " % (inputfile, dataset.getFileSize(), dataset.getFileNumElements(), dataset.getFileMaxSup(), (dataset.getFileMaxSup()/dataset.getFileSize()) * 100))
+        # print("File name: %s DataFile size: %d Number of elements: %d maximun support:  %d maximun support percentage: %.15f " % (inputfile, dataset.getFileSize(), dataset.getFileNumElements(), dataset.getFileMaxSup(), (dataset.getFileMaxSup()/dataset.getFileSize()) * 100))
+        # print("File name: %s DataFile size: %d Number of elements: %d " % (inputfile, dataset.getFileSize(), dataset.getFileNumElements()))
+        print("File name: %s Number of elements: %d " % (inputfile, dataset.getFileNumElements()))
         # var = DbGen(input_item_delimeter, output_item_delimeter, minimum_support_list, targetype, output_format, inputfile, maximalout)
         # print("Input DB Number of elements : %d" % var.getNumElements())
         # print("Input-Collections DB input lenght : ", var.getDBsize(DbGenType.Input))
