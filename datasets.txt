@@ -1,0 +1,32 @@
+dataset-100000v1.csv 	http://fimi.ua.ac.be/data/ 								                                              T10I4D100K IBM Almaden Quest research group												
+dataset-100000v2.csv 	http://fimi.ua.ac.be/data/ 								                                              T40I10D100K IBM Almaden Quest research group												
+																					
+						http://kdd.ics.uci.edu/summary.data.application.html                                                  Entree Chicago Recommendation Data															
+																					
+dataset-246.csv         http://www.cs.uef.fi/~whamalai/datasets.html 							  							  Forests 							
+dataset-377.csv         http://www.cs.uef.fi/~whamalai/datasets.html 							  							  Bog plants							
+dataset-1000.csv       	https://wiki.csc.calpoly.edu/datasets/wiki/apriori																				
+dataset-3196.csv   		http://fimi.ua.ac.be/data/ 								                                              chess											
+dataset-4141.csv	    http://www.philippe-fournier-viger.com/spmf/index.php?link=datasets.php	                              foodmart																			
+dataset-5000.csv       	https://wiki.csc.calpoly.edu/datasets/wiki/apriori																				
+dataset-8124.csv   		http://fimi.ua.ac.be/data/ 								                                              mushroom											
+dataset-20000.csv      	https://wiki.csc.calpoly.edu/datasets/wiki/apriori																				
+dataset-49046v1.csv  	http://fimi.ua.ac.be/data/ 								                                              pumsb 												
+dataset-49046v2.csv  	http://fimi.ua.ac.be/data/ 								                                              pumsb_star												
+dataset-59602.csv       http://www.philippe-fournier-viger.com/spmf/index.php?link=datasets.php                               BMS_WebView_1																					
+dataset-67557.csv   	http://fimi.ua.ac.be/data/ 								                                              connect												
+dataset-75000.csv 		https://wiki.csc.calpoly.edu/datasets/wiki/apriori																			
+dataset-77512.csv	    http://www.philippe-fournier-viger.com/spmf/index.php?link=datasets.php	                              BMS_WebView_2																			
+dataset-88162.csv 		http://recsyswiki.com/wiki/Grocery_shopping_datasets 	                                              Belgium retail market dataset, retail.dat  																		
+dataset-245057.csv      http://www.philippe-fournier-viger.com/spmf/index.php?link=datasets.php 							  Skin														
+dataset-340183.csv 		http://fimi.ua.ac.be/data/ 																			  accidents 
+dataset-541909.csv	    http://www.philippe-fournier-viger.com/spmf/index.php?link=datasets.php	                              OnlineRetail																			
+dataset-574913.csv      http://www.philippe-fournier-viger.com/spmf/index.php?link=datasets.php 							  RecordLink														
+dataset-990002.csv 		http://fimi.ua.ac.be/data/ 	http://www.philippe-fournier-viger.com/spmf/index.php?link=datasets.php	  kosarak																	
+dataset-1112949.csv	    http://www.philippe-fournier-viger.com/spmf/index.php?link=datasets.php	                              chainstore																			
+dataset-1692082.csv     http://fimi.ua.ac.be/data/                                                                            webdocs																					
+dataset-1000000v1.csv	http://www.philippe-fournier-viger.com/spmf/index.php?link=datasets.php	                              kddcup99																			
+dataset-1000000v2.csv   http://www.philippe-fournier-viger.com/spmf/index.php?link=datasets.php 							  PAMP														
+dataset-1000000v3.csv   http://www.philippe-fournier-viger.com/spmf/index.php?link=datasets.php 							  USCensus														
+dataset-1040000.csv     http://www.philippe-fournier-viger.com/spmf/index.php?link=datasets.php 							  PowerC														
+dataset-5000000.csv     http://www.philippe-fournier-viger.com/spmf/index.php?link=datasets.php 							  Susy 														
