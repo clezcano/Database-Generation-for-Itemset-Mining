@@ -19,7 +19,8 @@ def main():
         minimum_support_list = ["-s" + str(x).strip() for x in [40, 50, 70, 90]]  # positive: percentage of transactions, negative: exact number of transactions
         targetype = "-tm"  # frequest (s) maximal (m) closed (c)
         output_format = '-v" "'  # empty support information for output result
-        # inputfile = "dataset-246.csv"
+        maximalout = "-"  # "-" for standard output
+        inputfile = "dataset-246.csv"
         # inputfile = "dataset-377.csv"
         # inputfile = "dataset-1000.csv"
         # inputfile = "dataset-3196.csv"
@@ -44,29 +45,39 @@ def main():
         # inputfile = "dataset-1000000v3.csv"
         # inputfile = "dataset-1040000.csv"
         # inputfile = "dataset-1112949.csv"
-        inputfile = "dataset-1692082.csv"
-        #inputfile = "dataset-245057.csv"
-        maximalout = "-"  # "-" for standard output
+        # inputfile = "dataset-1692082.csv"
+        # inputfile = "dataset-5000000.csv"
 
-        dataset = InputFile(inputfile, delimeter)
+        # Dataset analysis
+        # dataset = InputFile(inputfile, delimeter)
         # print("File name: %s DataFile size: %d Number of elements: %d maximun support:  %d maximun support percentage: %.15f " % (inputfile, dataset.getFileSize(), dataset.getFileNumElements(), dataset.getFileMaxSup(), (dataset.getFileMaxSup()/dataset.getFileSize()) * 100))
         # print("File name: %s DataFile size: %d Number of elements: %d " % (inputfile, dataset.getFileSize(), dataset.getFileNumElements()))
-        print("File name: %s Number of elements: %d " % (inputfile, dataset.getFileNumElements()))
-        # var = DbGen(input_item_delimeter, output_item_delimeter, minimum_support_list, targetype, output_format, inputfile, maximalout)
+        # print("File name: %s Number of elements: %d " % (inputfile, dataset.getFileNumElements()))
+
+        # Input analysis
+        var = DbGen(input_item_delimeter, output_item_delimeter, minimum_support_list, targetype, output_format, inputfile, maximalout)
         # print("Input DB Number of elements : %d" % var.getNumElements())
-        # print("Input-Collections DB input lenght : ", var.getDBsize(DbGenType.Input))
-        # print("by DB : %d, %d, %d, %d," % (var.collection_list[0].size(DbGenType.Input), var.collection_list[1].size(DbGenType.Input), var.collection_list[2].size(DbGenType.Input), var.collection_list[3].size(DbGenType.Input)))
+        print("\nM1 size: %d M2 size: %d M3 size: %d M4 size: %d" % (var.collection_list[0].size(DbGenType.Input), var.collection_list[1].size(DbGenType.Input), var.collection_list[2].size(DbGenType.Input), var.collection_list[3].size(DbGenType.Input)))
+        print("Input DB size : ", var.getDBsize(DbGenType.Input))
+        print("\nM1 # elements: %d M2 # elements: %d M3 # elements: %d M4 # elements: %d" % (
+        var.collection_list[0].getNumElements(), var.collection_list[1].getNumElements(),
+        var.collection_list[2].getNumElements(), var.collection_list[3].getNumElements()))
+        print("Input DB # elements : ", var.getNumElements())
 
         # startTime = time.time()
         # var.dbGenBasic()
         # elapsedTime = time.time() - startTime
+        # print("\nM1 size: %d M2 size: %d M3 size: %d M4 size: %d" %
+        #       (var.collection_list[0].size(DbGenType.Basic),
+        #        var.collection_list[1].size(DbGenType.Basic),
+        #        var.collection_list[2].size(DbGenType.Basic),
+        #        var.collection_list[3].size(DbGenType.Basic)))
         # print("\nBasic running time : ", (elapsedTime * 1000))
         # print("Output-Basic DB lenght : %d" % var.getDBsize(DbGenType.Basic))
-        # print("by DB : %d, %d, %d, %d," % (var.collection_list[0].size(DbGenType.Basic), var.collection_list[1].size(DbGenType.Basic), var.collection_list[2].size(DbGenType.Basic), var.collection_list[3].size(DbGenType.Basic)))
         # print("Basic List of absolute minimum support levels : ", var.getAbsMinSupLev(DbGenType.Basic))
         # print("Basic List of relative minimum support levels : ", var.getRelMinSupLev(DbGenType.Basic))
         # print("Basic Satisfy the inverse mining property? : ", var.satisfyInverseMiningProp(DbGenType.Basic))
-        #
+
         # startTime = time.time()
         # var.dbGenBasicOptimized()
         # elapsedTime = time.time() - startTime
@@ -76,7 +87,7 @@ def main():
         # print("BasicOptimized List of absolute minimum support levels : ", var.getAbsMinSupLev(DbGenType.BasicOptimized))
         # print("BasicOptimized List of relative minimum support levels : ", var.getRelMinSupLev(DbGenType.BasicOptimized))
         # print("BasicOptimized Satisfy the inverse mining property? : ", var.satisfyInverseMiningProp(DbGenType.BasicOptimized))
-        #
+
         # startTime = time.time()
         # var.dbGenGamma()
         # elapsedTime = time.time() - startTime

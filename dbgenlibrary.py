@@ -96,6 +96,9 @@ class DataBase:
     def getDBElements(self):
         return set(chain.from_iterable([itemset.getItemSet() for itemset in self.getDataBase()]))
 
+    def getNumElements(self):
+        return len(self.getDBElements())
+
     def getItemsetSup(self, xitemset, algorithm):  # get the absolute support of an itemset in a database. Basic doest not use this method
         if algorithm == DbGenType.BasicOptimized:
             if isinstance(xitemset, ItemSet):
