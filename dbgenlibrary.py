@@ -93,11 +93,22 @@ class DataBase:
                 self.itemUniverseSup.update({}.fromkeys(itemset.getItemSet(), itemset.basicOptimized_cardinality))
         return dict(self.itemUniverseSup.most_common())
 
-    def getDBElements(self):
-        return set(chain.from_iterable([itemset.getItemSet() for itemset in self.getDataBase()]))
+    def getDBElements(self, algorithm):
+        if algorithm == DbGenType.Input:
+            return set(chain.from_iterable([itemset.getItemSet() for itemset in self.getDataBase()]))
+        elif algorithm == DbGenType.Basic:
+            return set(chain.from_iterable([itemset.getItemSet() for itemset in self.getDataBase() if itemset.basic_cardinality > 0]))
+        elif algorithm == DbGenType.BasicOptimized:
+            return set(chain.from_iterable([itemset.getItemSet() for itemset in self.getDataBase() if itemset.basicOptimized_cardinality > 0]))
+        elif algorithm == DbGenType.Gamma:
+            return set(chain.from_iterable([itemset.getItemSet() for itemset in self.getDataBase() if itemset.gamma_cardinality > 0]))
+        elif algorithm == DbGenType.GammaOptimized:
+            return set(chain.from_iterable([itemset.getItemSet() for itemset in self.getDataBase() if itemset.gammaOptimized_cardinality > 0]))
+        elif algorithm == DbGenType.Hypergraph:
+            return set(chain.from_iterable([itemset.getItemSet() for itemset in self.getDataBase() if itemset.hypergraph_cardinality > 0]))
 
-    def getNumElements(self):
-        return len(self.getDBElements())
+    def getDBNumElements(self, algorithm):
+        return len(self.getDBElements(algorithm))
 
     def getItemsetSup(self, xitemset, algorithm):  # get the absolute support of an itemset in a database. Basic doest not use this method
         if algorithm == DbGenType.BasicOptimized:
@@ -341,11 +352,11 @@ class DbGen:
         if algorithm == DbGenType.Hypergraph:
             return max([self.getItemsetSupport(itemset, step, DbGenType.Hypergraph) for itemset in dbList])
 
-    def getElements(self):
-        return set(chain.from_iterable([db.getDBElements() for db in self.collection_list]))
+    def getElements(self, algorithm):
+        return set(chain.from_iterable([db.getDBElements(algorithm) for db in self.collection_list]))
 
-    def getNumElements(self):
-        return len(self.getElements())
+    def getNumElements(self, algorithm):
+        return len(self.getElements(algorithm))
 
     def genOperator(self, step, absoluteSupLevel, algorithm):
         if algorithm == DbGenType.Basic:
