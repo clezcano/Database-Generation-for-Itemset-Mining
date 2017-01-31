@@ -152,7 +152,7 @@ class DbGen:
         self.gammaOpt_MinSupLevels = list()  # Minimum support levels of dbGenOptimized algorithm
         self.hypergraph_MinSupLevels = list()  # Minimum support levels of dbGenHypergraph algorithm
         self.loadCollections()
-        self.elements = self.getElements()  # Universe singleton elements
+        # self.elements = self.getElements()  # Universe singleton elements
         if not self.satisfyContainmentProp():
             exit("This DB does not satisfy the containment property.")
 
