@@ -15,8 +15,8 @@ def main():
         # delimeter = ","
         input_item_delimeter = '-f"' + delimeter + '"'
         output_item_delimeter = "-k,"
-        # minimum_support_list = ["-s" + str(x).strip() for x in [2, 5, 7, 9]] # positive: percentage of transactions, negative: exact number of transactions
-        minimum_support_list = ["-s" + str(x).strip() for x in [40, 50, 70, 90]]  # positive: percentage of transactions, negative: exact number of transactions
+        minimum_support_list = ["-s" + str(x).strip() for x in [55, 65, 75]] # positive: percentage of transactions, negative: exact number of transactions
+        # minimum_support_list = ["-s" + str(x).strip() for x in [45, 55, 65, 75]]  # positive: percentage of transactions, negative: exact number of transactions
         targetype = "-tm"  # frequest (s) maximal (m) closed (c)
         output_format = '-v" "'  # empty support information for output result
         maximalout = "-"  # "-" for standard output
@@ -57,40 +57,48 @@ def main():
         # Input analysis
         var = DbGen(input_item_delimeter, output_item_delimeter, minimum_support_list, targetype, output_format, inputfile, maximalout)
         # print("Input DB Number of elements : %d" % var.getNumElements())
-        print("\nM1 size: %d M2 size: %d M3 size: %d M4 size: %d" % (var.collection_list[0].size(DbGenType.Input), var.collection_list[1].size(DbGenType.Input), var.collection_list[2].size(DbGenType.Input), var.collection_list[3].size(DbGenType.Input)))
+        print("\nM1 size: %d M2 size: %d M3 size: %d " % (var.collection_list[0].size(DbGenType.Input), var.collection_list[1].size(DbGenType.Input), var.collection_list[2].size(DbGenType.Input)))
         print("Input DB size : ", var.getDBsize(DbGenType.Input))
-        print("\nM1 # elements: %d M2 # elements: %d M3 # elements: %d M4 # elements: %d" % (
+        print("\nM1 # elements: %d M2 # elements: %d M3 # elements: %d" % (
         var.collection_list[0].getDBNumElements(DbGenType.Input), var.collection_list[1].getDBNumElements(DbGenType.Input),
-        var.collection_list[2].getDBNumElements(DbGenType.Input), var.collection_list[3].getDBNumElements(DbGenType.Input)))
+        var.collection_list[2].getDBNumElements(DbGenType.Input)))
         print("Input DB # elements : ", var.getNumElements(DbGenType.Input))
 
-        startTime = time.time()
-        var.dbGenBasic()
-        elapsedTime = time.time() - startTime
-        print("\nPartial DB # elements First stage: %d Partial DB # elements Second stage: %d Partial DB # elements Third stage: %d Partial DB # elements Forth stage: %d" %
-              var.collection_list[0].getDBNumElements(DbGenType.Basic),
-              var.collection_list[1].getDBNumElements(DbGenType.Basic),
-              var.collection_list[2].getDBNumElements(DbGenType.Basic),
-              var.collection_list[3].getDBNumElements(DbGenType.Basic))
-        print("Final DB # elements : ", var.getNumElements(DbGenType.Basic))
-        print("\nBasic running time : ", (elapsedTime * 1000))
-
-        print("\nPartial DB size First stage: %d Partial DB size Second stage: %d Partial DB size Third stage: %d Partial DB size Forth stage: %d" %
-              (var.collection_list[0].size(DbGenType.Basic),
-               var.collection_list[1].size(DbGenType.Basic),
-               var.collection_list[2].size(DbGenType.Basic),
-               var.collection_list[3].size(DbGenType.Basic)))
-        print("Final DB size : %d" % var.getDBsize(DbGenType.Basic))
-        print("Basic List of absolute minimum support levels : ", var.getAbsMinSupLev(DbGenType.Basic))
-        print("Basic List of relative minimum support levels : ", var.getRelMinSupLev(DbGenType.Basic))
-        print("Basic Satisfy the inverse mining property? : ", var.satisfyInverseMiningProp(DbGenType.Basic))
+        # startTime = time.time()
+        # var.dbGenBasic()
+        # elapsedTime = time.time() - startTime
+        # print("\nPartial DB # elements First stage: %d Partial DB # elements Second stage: %d Partial DB # elements Third stage: %d" %
+        #       (var.collection_list[0].getDBNumElements(DbGenType.Basic),
+        #       var.collection_list[1].getDBNumElements(DbGenType.Basic),
+        #       var.collection_list[2].getDBNumElements(DbGenType.Basic)))
+        # print("Final DB # elements : ", var.getNumElements(DbGenType.Basic))
+        # print("\nBasic running time : ", (elapsedTime * 1000))
+        #
+        # print("\nPartial DB size First stage: %d Partial DB size Second stage: %d Partial DB size Third stage: %d" %
+        #       (var.collection_list[0].size(DbGenType.Basic),
+        #        var.collection_list[1].size(DbGenType.Basic),
+        #        var.collection_list[2].size(DbGenType.Basic)))
+        # print("Final DB size : %d" % var.getDBsize(DbGenType.Basic))
+        # print("Basic List of absolute minimum support levels : ", var.getAbsMinSupLev(DbGenType.Basic))
+        # print("Basic List of relative minimum support levels : ", var.getRelMinSupLev(DbGenType.Basic))
+        # print("Basic Satisfy the inverse mining property? : ", var.satisfyInverseMiningProp(DbGenType.Basic))
 
         # startTime = time.time()
         # var.dbGenBasicOptimized()
         # elapsedTime = time.time() - startTime
-        # print("\nBasicOptimized running time : ", (elapsedTime * 1000))
-        # print("Output-BasicOptimized DB lenght : %d" % var.getDBsize(DbGenType.BasicOptimized))
-        # print("by DB : %d, %d, %d, %d," % (var.collection_list[0].size(DbGenType.BasicOptimized), var.collection_list[1].size(DbGenType.BasicOptimized), var.collection_list[2].size(DbGenType.BasicOptimized), var.collection_list[3].size(DbGenType.BasicOptimized)))
+        # print("\nPartial DB # elements First stage: %d Partial DB # elements Second stage: %d Partial DB # elements Third stage: %d" %
+        #      (var.collection_list[0].getDBNumElements(DbGenType.BasicOptimized),
+        #      var.collection_list[1].getDBNumElements(DbGenType.BasicOptimized),
+        #      var.collection_list[2].getDBNumElements(DbGenType.BasicOptimized)))
+        #
+        # print("Final DB # elements : ", var.getNumElements(DbGenType.BasicOptimized))
+        # print("\0BasicOptimized running time : ", (elapsedTime * 1000))
+        #
+        # print("\nPartial DB size First stage: %d Partial DB size Second stage: %d Partial DB size Third stage: %d" %
+        #     (var.collection_list[0].size(DbGenType.BasicOptimized),
+        #     var.collection_list[1].size(DbGenType.BasicOptimized),
+        #     var.collection_list[2].size(DbGenType.BasicOptimized)))
+        # print("Final DB size : %d" % var.getDBsize(DbGenType.BasicOptimized))
         # print("BasicOptimized List of absolute minimum support levels : ", var.getAbsMinSupLev(DbGenType.BasicOptimized))
         # print("BasicOptimized List of relative minimum support levels : ", var.getRelMinSupLev(DbGenType.BasicOptimized))
         # print("BasicOptimized Satisfy the inverse mining property? : ", var.satisfyInverseMiningProp(DbGenType.BasicOptimized))
@@ -98,42 +106,72 @@ def main():
         # startTime = time.time()
         # var.dbGenGamma()
         # elapsedTime = time.time() - startTime
-        # print("\nGamma running time : ", (elapsedTime * 1000))
-        # print("Output-Gamma DB lenght : %d" % var.getDBsize(DbGenType.Gamma))
-        # print("by DB : %d, %d, %d, %d," % (
-        #     var.collection_list[0].size(DbGenType.Gamma),
+        # print(
+        #     "\nPartial DB # elements First stage: %d Partial DB # elements Second stage: %d Partial DB # elements Third stage: %d " %
+        #     (var.collection_list[0].getDBNumElements(DbGenType.Gamma),
+        #      var.collection_list[1].getDBNumElements(DbGenType.Gamma),
+        #      var.collection_list[2].getDBNumElements(DbGenType.Gamma)))
+        #
+        # print("Final DB # elements : ", var.getNumElements(DbGenType.Gamma))
+        # print("\0Gamma running time : ", (elapsedTime * 1000))
+        #
+        # print(
+        #     "\nPartial DB size First stage: %d Partial DB size Second stage: %d Partial DB size Third stage: %d " %
+        #    (var.collection_list[0].size(DbGenType.Gamma),
         #     var.collection_list[1].size(DbGenType.Gamma),
-        #     var.collection_list[2].size(DbGenType.Gamma),
-        #     var.collection_list[3].size(DbGenType.Gamma)))
+        #     var.collection_list[2].size(DbGenType.Gamma)))
+        # print("Final DB size : %d" % var.getDBsize(DbGenType.Gamma))
         # print("Gamma List of absolute minimum support levels : ", var.getAbsMinSupLev(DbGenType.Gamma))
         # print("Gamma List of relative minimum support levels : ", var.getRelMinSupLev(DbGenType.Gamma))
         # print("Gamma Satisfy the inverse mining property? : ", var.satisfyInverseMiningProp(DbGenType.Gamma))
-        #
+
+
         # startTime = time.time()
         # var.dbGenGammaOptimized()
         # elapsedTime = time.time() - startTime
-        # print("\nGammaOptimized running time : ", (elapsedTime * 1000))
-        # print("Output-GammaOptimized DB lenght : %d" % var.getDBsize(DbGenType.GammaOptimized))
-        # print("by DB : %d, %d, %d, %d," % (
-        # var.collection_list[0].size(DbGenType.GammaOptimized), var.collection_list[1].size(DbGenType.GammaOptimized),
-        # var.collection_list[2].size(DbGenType.GammaOptimized), var.collection_list[3].size(DbGenType.GammaOptimized)))
+        # print(
+        #     "\nPartial DB # elements First stage: %d Partial DB # elements Second stage: %d Partial DB # elements Third stage: %d " %
+        #     (var.collection_list[0].getDBNumElements(DbGenType.GammaOptimized),
+        #      var.collection_list[1].getDBNumElements(DbGenType.GammaOptimized),
+        #      var.collection_list[2].getDBNumElements(DbGenType.GammaOptimized)))
+        #
+        # print("Final DB # elements : ", var.getNumElements(DbGenType.GammaOptimized))
+        # print("\0GammaOptimized running time : ", (elapsedTime * 1000))
+        #
+        # print(
+        #     "\nPartial DB size First stage: %d Partial DB size Second stage: %d Partial DB size Third stage: %d " %
+        #     (var.collection_list[0].size(DbGenType.GammaOptimized),
+        #      var.collection_list[1].size(DbGenType.GammaOptimized),
+        #      var.collection_list[2].size(DbGenType.GammaOptimized)))
+        # print("Final DB size : %d" % var.getDBsize(DbGenType.GammaOptimized))
         # print("GammaOptimized List of absolute minimum support levels : ", var.getAbsMinSupLev(DbGenType.GammaOptimized))
         # print("GammaOptimized List of relative minimum support levels : ", var.getRelMinSupLev(DbGenType.GammaOptimized))
         # print("GammaOptimized Satisfy the inverse mining property? : ", var.satisfyInverseMiningProp(DbGenType.GammaOptimized))
-        #
-        # startTime = time.time()
-        # var.dbGenHypergraph()
-        # elapsedTime = time.time() - startTime
-        # print("\nHypergraph running time : ", (elapsedTime * 1000))
-        # print("Output-Hypergraph DB lenght : %d" % var.getDBsize(DbGenType.Hypergraph))
-        # print("by DB : %d, %d, %d, %d," % (
-        #     var.collection_list[0].size(DbGenType.Hypergraph),
-        #     var.collection_list[1].size(DbGenType.Hypergraph),
-        #     var.collection_list[2].size(DbGenType.Hypergraph),
-        #     var.collection_list[3].size(DbGenType.Hypergraph)))
-        # print("Hypergraph List of absolute minimum support levels : ", var.getAbsMinSupLev(DbGenType.Hypergraph))
-        # print("Hypergraph List of relative minimum support levels : ", var.getRelMinSupLev(DbGenType.Hypergraph))
-        # print("Hypergraph Satisfy the inverse mining property? : ", var.satisfyInverseMiningProp(DbGenType.Hypergraph))
+
+        startTime = time.time()
+        var.dbGenHypergraph()
+        elapsedTime = time.time() - startTime
+        print(
+            "\nPartial DB # elements First stage: %d Partial DB # elements Second stage: %d Partial DB # elements Third stage: %d " %
+            (var.collection_list[0].getDBNumElements(DbGenType.Hypergraph),
+             var.collection_list[1].getDBNumElements(DbGenType.Hypergraph),
+             var.collection_list[2].getDBNumElements(DbGenType.Hypergraph)))
+
+        print("Final DB # elements : ", var.getNumElements(DbGenType.Hypergraph))
+        print("\0Hypergraph running time : ", (elapsedTime * 1000))
+
+        print(
+            "\nPartial DB size First stage: %d Partial DB size Second stage: %d Partial DB size Third stage: %d " %
+            (var.collection_list[0].size(DbGenType.Hypergraph),
+             var.collection_list[1].size(DbGenType.Hypergraph),
+             var.collection_list[2].size(DbGenType.Hypergraph)))
+        print("Final DB size : %d" % var.getDBsize(DbGenType.Hypergraph))
+        print("Hypergraph List of absolute minimum support levels : ",
+              var.getAbsMinSupLev(DbGenType.Hypergraph))
+        print("Hypergraph List of relative minimum support levels : ",
+              var.getRelMinSupLev(DbGenType.Hypergraph))
+        print("Hypergraph Satisfy the inverse mining property? : ",
+              var.satisfyInverseMiningProp(DbGenType.Hypergraph))
 
 
 

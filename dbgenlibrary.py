@@ -318,7 +318,7 @@ class DbGen:
 
     def maxMinimalHypergraph(self, step):
         h = hypergraph()
-        universeElements = self.getElements()
+        universeElements = self.getElements(DbGenType.Hypergraph)
         for i in [universeElements.difference(itemset.getItemSet()) for itemset in self.collection_list[step].getDataBase()]:
             h.added(i)
         minTransv = h.transv().hyedges
