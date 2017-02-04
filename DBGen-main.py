@@ -16,12 +16,12 @@ def main():
         input_item_delimeter = '-f"' + delimeter + '"'
         output_item_delimeter = "-k,"
         # minimum_support_list = ["-s" + str(x).strip() for x in [55, 65, 75]] # positive: percentage of transactions, negative: exact number of transactions
-        minimum_support_list = ["-s" + str(x).strip() for x in [1, 5, 9]]  # positive: percentage of transactions, negative: exact number of transactions
+        minimum_support_list = ["-s" + str(x).strip() for x in [1, 3, 4.5]]  # positive: percentage of transactions, negative: exact number of transactions
         targetype = "-tm"  # frequest (s) maximal (m) closed (c)
         output_format = '-v" "'  # empty support information for output result
         maximalout = "-"  # "-" for standard output
         # inputfile = "dataset-246.csv"
-        inputfile = "dataset-377.csv"
+        # inputfile = "dataset-377.csv"
         # inputfile = "dataset-1000.csv"
         # inputfile = "dataset-3196.csv"
         # inputfile = "dataset-4141.csv"
@@ -37,7 +37,7 @@ def main():
         # inputfile = "dataset-88162.csv"
         # inputfile = "dataset-245057.csv"
         # inputfile = "dataset-340183.csv"
-        inputfile = "dataset-541909.csv"
+        # inputfile = "dataset-541909.csv"
         # inputfile = "dataset-574913.csv"
         # inputfile = "dataset-990002.csv"  # "groceries.csv"
         # inputfile = "dataset-1000000v1.csv"
@@ -45,7 +45,7 @@ def main():
         # inputfile = "dataset-1000000v3.csv"
         # inputfile = "dataset-1040000.csv"
         # inputfile = "dataset-1112949.csv"
-        # inputfile = "dataset-1692082.csv"
+        inputfile = "dataset-1692082.csv"
         # inputfile = "dataset-5000000.csv"
 
         print("Dataset analysis-------------------------------------------------------------------------------------------------")
