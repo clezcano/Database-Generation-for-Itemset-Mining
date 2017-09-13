@@ -24,7 +24,14 @@ class InputFile:
         print(fileMaxSup)
         return max(fileMaxSup.values())
 
-class Graphmetrics:
+    def number1(self):
+        sum = 0
+        with open(self.filename, 'r') as f:
+            for line in f.readlines():
+                sum = sum + len(line.strip().split(self.delimeter))
+        return sum
+
+class metrics:
 
     def __init__(self, filename, delimeter):
         self.G = nx.Graph()
@@ -36,6 +43,10 @@ class Graphmetrics:
 
     def edgeslist(self):
         return self.G.edges()
+
+    def fraction1(self):
+        f = InputFile(self.filename, self.delimeter)
+        return f.number1() / (f.getFileSize() * f.getFileNumElements())
 
     def density(self):
         with open(self.filename, 'r') as f:
@@ -53,7 +64,7 @@ class Graphmetrics:
 
 def main():
 
-    # inputfile = "dataset-246.csv"
+    #inputfile = "dataset-246.csv"
     # inputfile = "dataset-377.csv"
     # inputfile = "dataset-1000.csv"
     # inputfile = "dataset-3196.csv"
@@ -70,7 +81,7 @@ def main():
     # inputfile = "dataset-88162.csv"
     # inputfile = "dataset-245057.csv"
     # inputfile = "dataset-340183.csv"
-    inputfile = "dataset-541909.csv"
+    # inputfile = "dataset-541909.csv"
     # inputfile = "dataset-574913.csv"
     # inputfile = "dataset-990002.csv"  # "groceries.csv"
     # inputfile = "dataset-1000000v1.csv"
@@ -80,22 +91,22 @@ def main():
     # inputfile = "dataset-1112949.csv"
     # inputfile = "dataset-1692082.csv"
     # inputfile = "dataset-5000000.csv"
-    #inputfile = "test1.tab"
-    delimeter = " "
-    #delimeter = ","
+    inputfile = "test1.tab"
+    #delimeter = " "
+    delimeter = ","
     dataset = InputFile(inputfile, delimeter)
     print("File name: %s DataFile size: %d Number of elements: %d " % (inputfile, dataset.getFileSize(), dataset.getFileNumElements()))
-    Gmetric = Graphmetrics(inputfile, delimeter)
-    print("Density %: ", Gmetric.density()*100)
+    Gmetric = metrics(inputfile, delimeter)
+    print("Graph density %: ", Gmetric.density()*100)
     # G.add_edges_from([(1, 2), (1, 3)])
     # G.add_node(3)
     # G.add_node(4)
     # print(nx.density(G))
     print("nodes : ", Gmetric.nodeslist())
     print("number of nodes : ", len(Gmetric.nodeslist()))
-    print("edgelist ", Gmetric.edgeslist())
-    print("edgelist ", len(Gmetric.edgeslist()))
-
+    print("edgelist :", Gmetric.edgeslist())
+    print("edgelist :", len(Gmetric.edgeslist()))
+    print("fraction of 1s %: ", Gmetric.fraction1() * 100)
 
 if __name__ == "__main__":
     main()
