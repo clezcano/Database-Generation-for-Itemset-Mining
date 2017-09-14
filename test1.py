@@ -1,6 +1,7 @@
 import networkx as nx
 from itertools import chain
 from collections import Counter
+from subprocess import check_output, CalledProcessError
 
 class InputFile:
     def __init__(self, filename, delimeter):
@@ -44,11 +45,11 @@ class metrics:
     def edgeslist(self):
         return self.G.edges()
 
-    def fraction1(self):
+    def fraction1(self):  # Metric 2
         f = InputFile(self.filename, self.delimeter)
         return f.number1() / (f.getFileSize() * f.getFileNumElements())
 
-    def density(self):
+    def graphDensity(self):  # Metric 1
         with open(self.filename, 'r') as f:
             for line in f.readlines():
                 transaction = line.strip().split(self.delimeter)
@@ -62,9 +63,52 @@ class metrics:
                     return -1 # empty transaction found
         return nx.density(self.G)
 
-def main():
+    def numberOfFreqSets(self, input_item_delimiter, output_item_delimiter, levelsupport, targetype, output_format, inputfile, maximalout):
+        try:
+            command = "eclat.exe" + " " + input_item_delimiter + " " + output_item_delimiter + " " + levelsupport + " " + targetype + " " + output_format + " " + inputfile + " " + maximalout
+            print("command eclat: ", command)
+            temp_collection = check_output(command).decode("utf-8").strip().split("\n")  # contains the maximal itemset list with useless space characters
+        except CalledProcessError as e:
+            exit("Eclat has failed running with minimum support: %s Return code: %d Output: %s" % (levelsupport, e.returncode, e.output.decode("utf-8")))
+        return len(temp_collection)
 
-    #inputfile = "dataset-246.csv"
+    def averageSupport(self, input_item_delimeter, output_item_delimiter, levelsupport, targetype, output_format, inputfile, maximalout):
+        try:
+            command = "eclat.exe" + " " + input_item_delimeter + " " + output_item_delimiter + " " + levelsupport + " " + targetype + " " + output_format + " " + inputfile + " " + maximalout
+            print("command eclat: ", command)
+            temp_collection = check_output(command).decode("utf-8").strip().split("\n")  # contains the maximal itemset list with useless space characters
+        except CalledProcessError as e:
+            exit("Eclat has failed running with minimum support: %s Return code: %d Output: %s" % (levelsupport, e.returncode, e.output.decode("utf-8")))
+        collection = [itemset.strip() for itemset in temp_collection]  # contains a maximal collection, ex: Mi
+        sum = 0
+        for i in collection:
+            sum = sum + float(i.split("(")[1].split(")")[0])
+        return sum / len(collection)
+
+    def averageTransSize(self, input_item_delimeter, output_item_delimiter, levelsupport, targetype, output_format, inputfile, maximalout):
+        try:
+            command = "eclat.exe" + " " + input_item_delimeter + " " + output_item_delimiter + " " + levelsupport + " " + targetype + " " + output_format + " " + inputfile + " " + maximalout
+            print("command eclat: ", command)
+            temp_collection = check_output(command).decode("utf-8").strip().split("\n")  # contains the maximal itemset list with useless space characters
+        except CalledProcessError as e:
+            exit("Eclat has failed running with minimum support: %s Return code: %d Output: %s" % (levelsupport, e.returncode, e.output.decode("utf-8")))
+        collection = [itemset.strip() for itemset in temp_collection]  # contains a maximal collection, ex: Mi
+        sum = 0
+        for i in collection:
+            sum = sum + len(i.split(","))
+        return sum / len(collection)
+
+def main():
+    delimeter = " "
+    # delimeter = ","
+    input_item_delimeter = '-f"' + delimeter + '"'
+    output_item_delimeter = "-k,"
+    minimum_support = "-s50" # positive: percentage of transactions, negative: exact number of transactions
+    targetype = "-ts"  # frequest (s) maximal (m) closed (c)
+    # output_format = '-v" "'  # empty support information for output result
+    output_format = ''  # empty support information for output result
+    maximalout = "-"  # "-" for standard output
+    inputfile = "dataset-246.csv"
     # inputfile = "dataset-377.csv"
     # inputfile = "dataset-1000.csv"
     # inputfile = "dataset-3196.csv"
@@ -91,13 +135,12 @@ def main():
     # inputfile = "dataset-1112949.csv"
     # inputfile = "dataset-1692082.csv"
     # inputfile = "dataset-5000000.csv"
-    inputfile = "test1.tab"
-    #delimeter = " "
-    delimeter = ","
+    # inputfile = "test1.tab"
+
     dataset = InputFile(inputfile, delimeter)
-    print("File name: %s DataFile size: %d Number of elements: %d " % (inputfile, dataset.getFileSize(), dataset.getFileNumElements()))
+    print("File name: %s \nDataFile size: %d \nNumber of elements: %d " % (inputfile, dataset.getFileSize(), dataset.getFileNumElements()))
     Gmetric = metrics(inputfile, delimeter)
-    print("Graph density %: ", Gmetric.density()*100)
+    print("Graph density %: ", Gmetric.graphDensity()*100)
     # G.add_edges_from([(1, 2), (1, 3)])
     # G.add_node(3)
     # G.add_node(4)
@@ -107,6 +150,9 @@ def main():
     print("edgelist :", Gmetric.edgeslist())
     print("edgelist :", len(Gmetric.edgeslist()))
     print("fraction of 1s %: ", Gmetric.fraction1() * 100)
+    print("Number of frequent itemsets : ", Gmetric.numberOfFreqSets(input_item_delimeter, output_item_delimeter, minimum_support, targetype, output_format, inputfile, maximalout))
+    print("Average support %: ", Gmetric.averageSupport(input_item_delimeter, output_item_delimeter, minimum_support, targetype, output_format, inputfile, maximalout))
+    print("Average transaction size : ", Gmetric.averageTransSize(input_item_delimeter, output_item_delimeter, minimum_support, targetype, output_format, inputfile, maximalout) )
 
 if __name__ == "__main__":
     main()
