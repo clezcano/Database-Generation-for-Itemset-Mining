@@ -29,7 +29,7 @@ class InputFile:
         sum = 0
         with open(self.filename, 'r') as f:
             for line in f.readlines():
-                sum = sum + len(line.strip().split(self.delimeter))
+                sum += len(line.strip().split(self.delimeter))
         return sum
 
 class metrics:
@@ -45,11 +45,11 @@ class metrics:
     def edgeslist(self):
         return self.G.edges()
 
-    def fraction1(self):  # Metric 2
+    def fraction1(self):  # Metric 1
         f = InputFile(self.filename, self.delimeter)
         return f.number1() / (f.getFileSize() * f.getFileNumElements())
 
-    def graphDensity(self):  # Metric 1
+    def graphDensity(self):  # Metric 2
         with open(self.filename, 'r') as f:
             for line in f.readlines():
                 transaction = line.strip().split(self.delimeter)
@@ -63,44 +63,58 @@ class metrics:
                     return -1 # empty transaction found
         return nx.density(self.G)
 
-    def numberOfFreqSets(self, input_item_delimiter, output_item_delimiter, levelsupport, targetype, output_format, inputfile, maximalout):
-        try:
-            command = "eclat.exe" + " " + input_item_delimiter + " " + output_item_delimiter + " " + levelsupport + " " + targetype + " " + output_format + " " + inputfile + " " + maximalout
-            print("command eclat: ", command)
-            temp_collection = check_output(command).decode("utf-8").strip().split("\n")  # contains the maximal itemset list with useless space characters
-        except CalledProcessError as e:
-            exit("Eclat has failed running with minimum support: %s Return code: %d Output: %s" % (levelsupport, e.returncode, e.output.decode("utf-8")))
-        return len(temp_collection)
 
-    def averageSupport(self, input_item_delimeter, output_item_delimiter, levelsupport, targetype, output_format, inputfile, maximalout):
+    def getFreqSet(self, input_item_delimeter, output_item_delimiter, levelsupport, targetype, output_format, inputfile, maximalout):
         try:
             command = "eclat.exe" + " " + input_item_delimeter + " " + output_item_delimiter + " " + levelsupport + " " + targetype + " " + output_format + " " + inputfile + " " + maximalout
             print("command eclat: ", command)
-            temp_collection = check_output(command).decode("utf-8").strip().split("\n")  # contains the maximal itemset list with useless space characters
+            temp_collection = check_output(command).decode("utf-8").strip().split(
+                "\n")  # contains the maximal itemset list with useless space characters
         except CalledProcessError as e:
-            exit("Eclat has failed running with minimum support: %s Return code: %d Output: %s" % (levelsupport, e.returncode, e.output.decode("utf-8")))
+            exit("Eclat has failed running with minimum support: %s Return code: %d Output: %s" % (
+            levelsupport, e.returncode, e.output.decode("utf-8")))
         collection = [itemset.strip() for itemset in temp_collection]  # contains a maximal collection, ex: Mi
+        return collection
+
+    def numberOfFreqSets(self, input_item_delimeter, output_item_delimiter, levelsupport, targetype, output_format, inputfile, maximalout):  # Metric 3
+        return len(self.getFreqSet(input_item_delimeter, output_item_delimiter, levelsupport, targetype, output_format, inputfile, maximalout))
+
+    def freqAverageSupport(self, input_item_delimeter, output_item_delimiter, levelsupport, targetype, output_format, inputfile, maximalout):
+        collection = self.getFreqSet(input_item_delimeter, output_item_delimiter, levelsupport, targetype, output_format, inputfile, maximalout)
         sum = 0
         for i in collection:
             sum = sum + float(i.split("(")[1].split(")")[0])
         return sum / len(collection)
 
-    def averageTransSize(self, input_item_delimeter, output_item_delimiter, levelsupport, targetype, output_format, inputfile, maximalout):
-        try:
-            command = "eclat.exe" + " " + input_item_delimeter + " " + output_item_delimiter + " " + levelsupport + " " + targetype + " " + output_format + " " + inputfile + " " + maximalout
-            print("command eclat: ", command)
-            temp_collection = check_output(command).decode("utf-8").strip().split("\n")  # contains the maximal itemset list with useless space characters
-        except CalledProcessError as e:
-            exit("Eclat has failed running with minimum support: %s Return code: %d Output: %s" % (levelsupport, e.returncode, e.output.decode("utf-8")))
-        collection = [itemset.strip() for itemset in temp_collection]  # contains a maximal collection, ex: Mi
+    def avgFreqSize(self, input_item_delimeter, output_item_delimiter, levelsupport, targetype, output_format, inputfile, maximalout):
+        collection = self.getFreqSet(input_item_delimeter, output_item_delimiter, levelsupport, targetype, output_format, inputfile, maximalout)
         sum = 0
         for i in collection:
-            sum = sum + len(i.split(","))
+            sum += len(i.split(","))
         return sum / len(collection)
 
+    def maxFreqLenght(self, input_item_delimeter, output_item_delimiter, levelsupport, targetype, output_format, inputfile, maximalout):
+        collection = self.getFreqSet(input_item_delimeter, output_item_delimiter, levelsupport, targetype, output_format, inputfile, maximalout)
+        max = 0
+        for i in collection:
+            aux = len(i.split(","))
+            if aux > max:
+                max = aux
+        return max
+
+    def freqLengthDist(self, input_item_delimeter, output_item_delimiter, levelsupport, targetype, output_format, inputfile, maximalout, numElem):
+        collection = self.getFreqSet(input_item_delimeter, output_item_delimiter, levelsupport, targetype, output_format, inputfile, maximalout)
+        dist = [0] * (numElem + 1)
+        for i in collection:
+            dist[len(i.split(","))] += 1
+        aux = ""
+        for _ in dist[1:]:
+            aux += (str(_) + ", ")
+        return aux
+
 def main():
-    delimeter = " "
-    # delimeter = ","
+    # delimeter = " "
+    delimeter = ","
     input_item_delimeter = '-f"' + delimeter + '"'
     output_item_delimeter = "-k,"
     minimum_support = "-s50" # positive: percentage of transactions, negative: exact number of transactions
@@ -108,11 +122,11 @@ def main():
     # output_format = '-v" "'  # empty support information for output result
     output_format = ''  # empty support information for output result
     maximalout = "-"  # "-" for standard output
-    inputfile = "dataset-246.csv"
+    # inputfile = "dataset-246.csv"
     # inputfile = "dataset-377.csv"
     # inputfile = "dataset-1000.csv"
     # inputfile = "dataset-3196.csv"
-    #inputfile = "dataset-4141.csv"
+    # inputfile = "dataset-4141.csv"
     # inputfile = "dataset-5000.csv"
     # inputfile = "dataset-8124.csv"
     # inputfile = "dataset-20000.csv"
@@ -135,24 +149,32 @@ def main():
     # inputfile = "dataset-1112949.csv"
     # inputfile = "dataset-1692082.csv"
     # inputfile = "dataset-5000000.csv"
-    # inputfile = "test1.tab"
+    inputfile = "test1.tab"
 
-    dataset = InputFile(inputfile, delimeter)
-    print("File name: %s \nDataFile size: %d \nNumber of elements: %d " % (inputfile, dataset.getFileSize(), dataset.getFileNumElements()))
-    Gmetric = metrics(inputfile, delimeter)
-    print("Graph density %: ", Gmetric.graphDensity()*100)
     # G.add_edges_from([(1, 2), (1, 3)])
     # G.add_node(3)
     # G.add_node(4)
     # print(nx.density(G))
-    print("nodes : ", Gmetric.nodeslist())
-    print("number of nodes : ", len(Gmetric.nodeslist()))
-    print("edgelist :", Gmetric.edgeslist())
-    print("edgelist :", len(Gmetric.edgeslist()))
-    print("fraction of 1s %: ", Gmetric.fraction1() * 100)
-    print("Number of frequent itemsets : ", Gmetric.numberOfFreqSets(input_item_delimeter, output_item_delimeter, minimum_support, targetype, output_format, inputfile, maximalout))
-    print("Average support %: ", Gmetric.averageSupport(input_item_delimeter, output_item_delimeter, minimum_support, targetype, output_format, inputfile, maximalout))
-    print("Average transaction size : ", Gmetric.averageTransSize(input_item_delimeter, output_item_delimeter, minimum_support, targetype, output_format, inputfile, maximalout) )
+    # print("nodes : ", Gmetric.nodeslist())
+    # print("number of nodes : ", len(Gmetric.nodeslist()))
+    # print("edgelist :", Gmetric.edgeslist())
+    # print("edgelist :", len(Gmetric.edgeslist()))
+
+    dataset = InputFile(inputfile, delimeter)
+    Gmetric = metrics(inputfile, delimeter)
+    print("File name: %s " % (inputfile))
+    print("1/ Data file size: %d " % (dataset.getFileSize()))
+    numElem = dataset.getFileNumElements()
+    print("2/ Data file number of elements: %d " % numElem)
+    print("3/ Data file fraction of 1s %: ", Gmetric.fraction1() * 100)
+    print("4/ Data file graph density %: ", Gmetric.graphDensity() * 100)
+    print("5/ Number of frequent itemsets : ", Gmetric.numberOfFreqSets(input_item_delimeter, output_item_delimeter, minimum_support, targetype, output_format, inputfile, maximalout))
+    print("6/ Average support %: ", Gmetric.freqAverageSupport(input_item_delimeter, output_item_delimeter, minimum_support, targetype, output_format, inputfile, maximalout))
+    print("7/ Average frequent itemset length : ", Gmetric.avgFreqSize(input_item_delimeter, output_item_delimeter, minimum_support, targetype, output_format, inputfile, maximalout))
+    print("8/ Maximum frequent itemset length : ", Gmetric.maxFreqLenght(input_item_delimeter, output_item_delimeter, minimum_support, targetype, output_format, inputfile, maximalout))
+    print("9/ Length distribution : ", Gmetric.freqLengthDist(input_item_delimeter, output_item_delimeter, minimum_support, targetype, output_format, inputfile, maximalout, numElem))
+
+
 
 if __name__ == "__main__":
     main()
