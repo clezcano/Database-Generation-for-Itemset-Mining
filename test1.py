@@ -112,6 +112,12 @@ class metrics:
             aux += (str(_) + ", ")
         return aux
 
+    def NegativeBorderLengthDist(self, input_item_delimeter, output_item_delimiter, levelsupport, targetype, output_format, inputfile, maximalout, numElem):
+        collection = self.getFreqSet(input_item_delimeter, output_item_delimiter, levelsupport, targetype, output_format, inputfile, maximalout, numElem)
+
+
+
+
 def main():
     # delimeter = " "
     delimeter = ","
@@ -173,8 +179,7 @@ def main():
     print("7/ Average frequent itemset length : ", Gmetric.avgFreqSize(input_item_delimeter, output_item_delimeter, minimum_support, targetype, output_format, inputfile, maximalout))
     print("8/ Frequent itemset maximum length : ", Gmetric.freqMaxLenght(input_item_delimeter, output_item_delimeter, minimum_support, targetype, output_format, inputfile, maximalout))
     print("9/ Length distribution : ", Gmetric.freqLengthDist(input_item_delimeter, output_item_delimeter, minimum_support, targetype, output_format, inputfile, maximalout, numElem))
-
-
+    print("10/ Maximal freq. length distribution : ", Gmetric.freqLengthDist(input_item_delimeter, output_item_delimeter, minimum_support, "-tm", output_format, inputfile, maximalout, numElem))
 
 if __name__ == "__main__":
     main()
