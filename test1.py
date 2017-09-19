@@ -2,6 +2,7 @@ import networkx as nx
 from itertools import chain
 from collections import Counter
 from subprocess import check_output, CalledProcessError
+from hypergraph import *
 
 class InputFile:
     def __init__(self, filename, delimeter):
@@ -12,6 +13,11 @@ class InputFile:
         # print("escape: %s" % self.delimeter)
         with open(self.filename, 'r') as f:
             return len(set(chain.from_iterable([{i.strip() for i in line.strip().split(self.delimeter)} for line in f.readlines()])))
+
+    def getFileElements(self):
+        # print("escape: %s" % self.delimeter)
+        with open(self.filename, 'r') as f:
+            return set(chain.from_iterable([{i.strip() for i in line.strip().split(self.delimeter)} for line in f.readlines()]))
 
     def getFileSize(self):
         with open(self.filename, 'r') as f:
@@ -68,11 +74,9 @@ class metrics:
         try:
             command = "eclat.exe" + " " + input_item_delimeter + " " + output_item_delimiter + " " + levelsupport + " " + targetype + " " + output_format + " " + inputfile + " " + maximalout
             print("command eclat: ", command)
-            temp_collection = check_output(command).decode("utf-8").strip().split(
-                "\n")  # contains the maximal itemset list with useless space characters
+            temp_collection = check_output(command).decode("utf-8").strip().split("\n")  # contains the maximal itemset list with useless space characters
         except CalledProcessError as e:
-            exit("Eclat has failed running with minimum support: %s Return code: %d Output: %s" % (
-            levelsupport, e.returncode, e.output.decode("utf-8")))
+            exit("Eclat has failed running with minimum support: %s Return code: %d Output: %s" % (levelsupport, e.returncode, e.output.decode("utf-8")))
         collection = [itemset.strip() for itemset in temp_collection]  # contains a maximal collection, ex: Mi
         return collection
 
@@ -102,8 +106,7 @@ class metrics:
                 max = aux
         return max
 
-    def freqLengthDist(self, input_item_delimeter, output_item_delimiter, levelsupport, targetype, output_format, inputfile, maximalout, numElem):
-        collection = self.getFreqSet(input_item_delimeter, output_item_delimiter, levelsupport, targetype, output_format, inputfile, maximalout)
+    def lengthDist(self, collection, numElem):
         dist = [0] * (numElem + 1)
         for i in collection:
             dist[len(i.split(","))] += 1
@@ -112,9 +115,18 @@ class metrics:
             aux += (str(_) + ", ")
         return aux
 
-    def NegativeBorderLengthDist(self, input_item_delimeter, output_item_delimiter, levelsupport, targetype, output_format, inputfile, maximalout, numElem):
-        collection = self.getFreqSet(input_item_delimeter, output_item_delimiter, levelsupport, targetype, output_format, inputfile, maximalout, numElem)
+    def freqLengthDist(self, input_item_delimeter, output_item_delimiter, levelsupport, targetype, output_format, inputfile, maximalout, numElem):
+        collection = self.getFreqSet(input_item_delimeter, output_item_delimiter, levelsupport, targetype, output_format, inputfile, maximalout)
+        return self.lengthDist(collection, numElem)
 
+    def negativeBorderLengthDist(self, input_item_delimeter, output_item_delimiter, levelsupport, targetype, output_format, inputfile, maximalout, elements):
+        numElem = len(elements)
+        collection = self.getFreqSet(input_item_delimeter, output_item_delimiter, levelsupport, targetype, output_format, inputfile, maximalout)
+        h = hypergraph()
+        for i in [elements.difference(itemset) for itemset in collection]:
+            h.added(i)
+        minTransv = h.transv().hyedges
+        return self.lengthDist(minTransv, numElem)
 
 
 
@@ -171,6 +183,7 @@ def main():
     print("File name: %s " % (inputfile))
     print("1/ Data file size: %d " % (dataset.getFileSize()))
     numElem = dataset.getFileNumElements()
+    elements = dataset.getFileElements()
     print("2/ Data file number of elements: %d " % numElem)
     print("3/ Data file fraction of 1s %: ", Gmetric.fraction1() * 100)
     print("4/ Data file graph density %: ", Gmetric.graphDensity() * 100)
@@ -179,7 +192,8 @@ def main():
     print("7/ Average frequent itemset length : ", Gmetric.avgFreqSize(input_item_delimeter, output_item_delimeter, minimum_support, targetype, output_format, inputfile, maximalout))
     print("8/ Frequent itemset maximum length : ", Gmetric.freqMaxLenght(input_item_delimeter, output_item_delimeter, minimum_support, targetype, output_format, inputfile, maximalout))
     print("9/ Length distribution : ", Gmetric.freqLengthDist(input_item_delimeter, output_item_delimeter, minimum_support, targetype, output_format, inputfile, maximalout, numElem))
-    print("10/ Maximal freq. length distribution : ", Gmetric.freqLengthDist(input_item_delimeter, output_item_delimeter, minimum_support, "-tm", output_format, inputfile, maximalout, numElem))
+    print("10/ Positive border length distribution : ", Gmetric.freqLengthDist(input_item_delimeter, output_item_delimeter, minimum_support, "-tm", output_format, inputfile, maximalout, numElem))
+    print("11/ Negative border length distribution : ", Gmetric.negativeBorderLengthDist(input_item_delimeter, output_item_delimeter, minimum_support, "-tm", '-v" "', inputfile, maximalout, elements))
 
 if __name__ == "__main__":
     main()
