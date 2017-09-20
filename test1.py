@@ -106,7 +106,7 @@ class metrics:
                 max = aux
         return max
 
-    def lengthDist(self, collection, numElem):
+    def lengthDist_str(self, collection, numElem):
         dist = [0] * (numElem + 1)
         for i in collection:
             dist[len(i.split(","))] += 1
@@ -115,18 +115,35 @@ class metrics:
             aux += (str(_) + ", ")
         return aux
 
+    def lengthDist_int(self, collection, numElem):
+        dist = [0] * (numElem + 1)
+        for i in collection:
+            dist[len(i)] += 1
+        aux = ""
+        for _ in dist[1:]:
+            aux += (str(_) + ", ")
+        return aux
+
+    def strToIn_itemset(self, itemset_str):
+        aux = set()
+        for i in itemset_str.split(","):
+            aux.add(i.strip())
+        return aux
+
     def freqLengthDist(self, input_item_delimeter, output_item_delimiter, levelsupport, targetype, output_format, inputfile, maximalout, numElem):
         collection = self.getFreqSet(input_item_delimeter, output_item_delimiter, levelsupport, targetype, output_format, inputfile, maximalout)
-        return self.lengthDist(collection, numElem)
+        return self.lengthDist_str(collection, numElem)
 
     def negativeBorderLengthDist(self, input_item_delimeter, output_item_delimiter, levelsupport, targetype, output_format, inputfile, maximalout, elements):
         numElem = len(elements)
-        collection = self.getFreqSet(input_item_delimeter, output_item_delimiter, levelsupport, targetype, output_format, inputfile, maximalout)
+        maximalFreq_string = self.getFreqSet(input_item_delimeter, output_item_delimiter, levelsupport, targetype, output_format, inputfile, maximalout)
+        maximalFreq_int = [self.strToIn_itemset(itemset) for itemset in maximalFreq_string]
         h = hypergraph()
-        for i in [elements.difference(itemset) for itemset in collection]:
+        for i in [elements.difference(itemset) for itemset in maximalFreq_int]:
             h.added(i)
         minTransv = h.transv().hyedges
-        return self.lengthDist(minTransv, numElem)
+        print("minTransv : ", minTransv)
+        return self.lengthDist_int(minTransv, numElem)
 
 
 
