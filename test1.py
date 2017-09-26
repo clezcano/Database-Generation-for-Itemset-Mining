@@ -1,5 +1,5 @@
 import networkx as nx
-from itertools import chain
+from itertools import chain, combinations
 from collections import Counter
 from subprocess import check_output, CalledProcessError
 from hypergraph import *
@@ -145,6 +145,16 @@ class metrics:
         print("minTransv : ", minTransv)
         return self.lengthDist_int(minTransv, numElem)
 
+    def entropy(self):
+        # lst = [1, 2, 3]
+        # combs = []
+        #
+        # for i in xrange(1, len(lst) + 1):
+        #     els = [list(x) for x in itertools.combinations(lst, i)]
+        #     combs.extend(els)
+        # Now combs holds this value:
+        #
+        # [[1], [2], [3], [1, 2], [1, 3], [2, 3], [1, 2, 3]]
 
 
 def main():
@@ -211,6 +221,9 @@ def main():
     print("9/ Length distribution : ", Gmetric.freqLengthDist(input_item_delimeter, output_item_delimeter, minimum_support, targetype, output_format, inputfile, maximalout, numElem))
     print("10/ Positive border length distribution : ", Gmetric.freqLengthDist(input_item_delimeter, output_item_delimeter, minimum_support, "-tm", output_format, inputfile, maximalout, numElem))
     print("11/ Negative border length distribution : ", Gmetric.negativeBorderLengthDist(input_item_delimeter, output_item_delimeter, minimum_support, "-tm", '-v" "', inputfile, maximalout, elements))
+    print("12/ Entropy : ", Gmetric.entropy())
+
+
 
 if __name__ == "__main__":
     main()
