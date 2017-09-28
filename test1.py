@@ -1,8 +1,9 @@
 import networkx as nx
 from itertools import chain, combinations
-from collections import Counter
 from subprocess import check_output, CalledProcessError
 from hypergraph import *
+import numpy as np
+from scipy.stats import entropy
 
 class InputFile:
     def __init__(self, filename, delimeter):
@@ -23,20 +24,62 @@ class InputFile:
         with open(self.filename, 'r') as f:
             return len(f.readlines())
 
-    def getFileMaxSup(self):
-        with open(self.filename, 'r') as f:
-            fileMaxSup = Counter()
-            for itemset in [{i.strip() for i in line.strip().split(self.delimeter)} for line in f.readlines()]:
-                fileMaxSup.update({}.fromkeys(itemset, 1))
-        print(fileMaxSup)
-        return max(fileMaxSup.values())
-
     def number1(self):
         sum = 0
         with open(self.filename, 'r') as f:
             for line in f.readlines():
                 sum += len(line.strip().split(self.delimeter))
         return sum
+
+class ItemSet:
+    def __init__(self):
+        self.itemset = set()
+
+    def add(self, value):
+        self.itemset.add(value)
+
+    def size(self):
+        return len(self.itemset)
+
+    def getItemSet(self):
+        return self.itemset
+
+class DataBase:
+    # Contains a list of itemsets
+    def __init__(self):
+        self.database = list()
+
+    def getDataBase(self):
+        return self.database
+
+    def appendItemset(self, value):
+        self.database.append(value)
+
+    def size(self):
+        return len(self.database)
+
+    def readDB(self, filename, delimeter):
+        self.database.clear()
+        with open(filename, 'r') as f:
+            for line in f.readlines():
+                itemset = ItemSet()
+                for item in line.strip().split(delimeter):
+                    itemset.add(item.strip())
+                self.appendItemset(itemset)
+
+    def getDBElements(self):
+        return set(chain.from_iterable([itemset.getItemSet() for itemset in self.getDataBase()]))
+
+    def getDBNumElements(self):
+        return len(self.getDBElements())
+
+    def getItemsetSup(self, xitemset):  # get the absolute support of an itemset in a database. Basic doest not use this method
+            if isinstance(xitemset, ItemSet):
+                return len(filter(lambda x: xitemset.getItemSet().issubset(x.getItemSet()), self.getDataBase()))
+            elif isinstance(xitemset, set):
+                return len(filter(lambda x: xitemset.issubset(x.getItemSet()), self.getDataBase()))
+            else:
+                exit("Method getItemsetSup() input an undefined parameter value")
 
 class metrics:
 
@@ -145,17 +188,15 @@ class metrics:
         print("minTransv : ", minTransv)
         return self.lengthDist_int(minTransv, numElem)
 
-    def entropy(self):
-        # lst = [1, 2, 3]
-        # combs = []
-        #
-        # for i in xrange(1, len(lst) + 1):
-        #     els = [list(x) for x in itertools.combinations(lst, i)]
-        #     combs.extend(els)
-        # Now combs holds this value:
-        #
-        # [[1], [2], [3], [1, 2], [1, 3], [2, 3], [1, 2, 3]]
-
+    def entropy(self, filename, delimeter, itemsetSize, minsup):
+        db = DataBase()
+        db.readDB(filename, delimeter)
+        dbElem = db.getDBElements()
+        dbSize = db.size()
+        kItemsets = [set(itemset) for itemset in combinations(dbElem, itemsetSize)]
+        kItemsetSup = [db.getItemsetSup(itemset) for itemset in kItemsets]
+        #aux = -1 * sum([for x in kItemsetSup])
+        return scipy.stats.entropy([1/7.0, 1/7.0, 5/7.0], base=2)
 
 def main():
     # delimeter = " "
@@ -221,7 +262,7 @@ def main():
     print("9/ Length distribution : ", Gmetric.freqLengthDist(input_item_delimeter, output_item_delimeter, minimum_support, targetype, output_format, inputfile, maximalout, numElem))
     print("10/ Positive border length distribution : ", Gmetric.freqLengthDist(input_item_delimeter, output_item_delimeter, minimum_support, "-tm", output_format, inputfile, maximalout, numElem))
     print("11/ Negative border length distribution : ", Gmetric.negativeBorderLengthDist(input_item_delimeter, output_item_delimeter, minimum_support, "-tm", '-v" "', inputfile, maximalout, elements))
-    print("12/ Entropy : ", Gmetric.entropy())
+    #print("12/ Entropy : ", Gmetric.entropy(inputfile, delimeter, elements))
 
 
 
