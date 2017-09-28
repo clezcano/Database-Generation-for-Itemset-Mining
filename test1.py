@@ -3,7 +3,6 @@ from itertools import chain, combinations
 from subprocess import check_output, CalledProcessError
 from hypergraph import *
 from scipy.stats import entropy
-# from math import log2
 import numpy as np
 
 class InputFile:
@@ -221,7 +220,7 @@ def main():
     # delimeter = ","
     input_item_delimeter = '-f"' + delimeter + '"'
     output_item_delimeter = "-k,"
-    suppValue = "50" # positive: percentage of transactions, negative: exact number of transactions
+    suppValue = "30" # positive: percentage of transactions, negative: exact number of transactions
     minimum_support = "-s" + suppValue   # Ex: "-s50" or "-s-50"
     targetype = "-ts"  # frequest (s) maximal (m) closed (c)
     output_format = ''  # empty support information for output result # output_format = '-v" "'  # empty support information for output result
