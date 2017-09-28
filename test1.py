@@ -221,7 +221,7 @@ def main():
     # delimeter = ","
     input_item_delimeter = '-f"' + delimeter + '"'
     output_item_delimeter = "-k,"
-    suppValue = "80" # positive: percentage of transactions, negative: exact number of transactions
+    suppValue = "50" # positive: percentage of transactions, negative: exact number of transactions
     minimum_support = "-s" + suppValue   # Ex: "-s50" or "-s-50"
     targetype = "-ts"  # frequest (s) maximal (m) closed (c)
     output_format = ''  # empty support information for output result # output_format = '-v" "'  # empty support information for output result
