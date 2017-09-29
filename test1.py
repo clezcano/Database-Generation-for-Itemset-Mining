@@ -220,7 +220,7 @@ def main():
     # delimeter = ","
     input_item_delimeter = '-f"' + delimeter + '"'
     output_item_delimeter = "-k,"
-    suppValue = "30" # positive: percentage of transactions, negative: exact number of transactions
+    suppValue = "50" # positive: percentage of transactions, negative: exact number of transactions
     minimum_support = "-s" + suppValue   # Ex: "-s50" or "-s-50"
     targetype = "-ts"  # frequest (s) maximal (m) closed (c)
     output_format = ''  # empty support information for output result # output_format = '-v" "'  # empty support information for output result
@@ -228,9 +228,9 @@ def main():
     entropyFunction = 1  # 1 scify.stats.entropy, 2 my own
     maximalout = "-"  # "-" for standard output
     # inputfile = "dataset-246.csv"
-    # inputfile = "dataset-377.csv"
+    inputfile = "dataset-377.csv"
     # inputfile = "dataset-1000.csv"
-    inputfile = "dataset-3196.csv"
+    # inputfile = "dataset-3196.csv"
     # inputfile = "dataset-4141.csv"
     # inputfile = "dataset-5000.csv"
     # inputfile = "dataset-8124.csv"
@@ -266,23 +266,23 @@ def main():
     # print("edgelist :", len(Gmetric.edgeslist()))
 
     dataset = InputFile(inputfile, delimeter)
+    numElem = dataset.getFileNumElements()
+    elements = dataset.getFileElements()
     Gmetric = metrics(inputfile, delimeter)
     print("File name: %s " % (inputfile))
     print("1/ Data file size: %d " % (dataset.getFileSize()))
-    numElem = dataset.getFileNumElements()
-    elements = dataset.getFileElements()
     print("2/ Data file number of elements: %d " % numElem)
     print("3/ Data file fraction of 1s %: ", Gmetric.fraction1() * 100)
     print("4/ Data file graph density %: ", Gmetric.graphDensity() * 100)
     print("5/ Number of frequent itemsets : ", Gmetric.numberOfFreqSets(input_item_delimeter, output_item_delimeter, minimum_support, targetype, output_format, inputfile, maximalout))
-    print("6/ Average support %: ", Gmetric.freqAverageSupport(input_item_delimeter, output_item_delimeter, minimum_support, targetype, output_format, inputfile, maximalout))
-    print("7/ Average frequent itemset length : ", Gmetric.avgFreqSize(input_item_delimeter, output_item_delimeter, minimum_support, targetype, output_format, inputfile, maximalout))
+    print("6/ Frequent itemset average support %: ", Gmetric.freqAverageSupport(input_item_delimeter, output_item_delimeter, minimum_support, targetype, output_format, inputfile, maximalout))
+    print("7/ Frequent itemset average length : ", Gmetric.avgFreqSize(input_item_delimeter, output_item_delimeter, minimum_support, targetype, output_format, inputfile, maximalout))
     print("8/ Frequent itemset maximum length : ", Gmetric.freqMaxLenght(input_item_delimeter, output_item_delimeter, minimum_support, targetype, output_format, inputfile, maximalout))
-    print("9/ Length distribution : [", Gmetric.freqLengthDist(input_item_delimeter, output_item_delimeter, minimum_support, targetype, output_format, inputfile, maximalout, numElem), "]")
+    print("9/ Frequent itemset length distribution : [", Gmetric.freqLengthDist(input_item_delimeter, output_item_delimeter, minimum_support, targetype, output_format, inputfile, maximalout, numElem), "]")
     print("10/ Positive border length distribution : [", Gmetric.freqLengthDist(input_item_delimeter, output_item_delimeter, minimum_support, "-tm", output_format, inputfile, maximalout, numElem), "]")
     print("11/ Negative border length distribution : [", Gmetric.negativeBorderLengthDist(input_item_delimeter, output_item_delimeter, minimum_support, "-tm", '-v" "', inputfile, maximalout, elements), "]")
-    print("12.1/ Entropy (scipy.stats): ", Gmetric.entropy(inputfile, delimeter, entropyItemsetSize, int(suppValue) / 100, entropyFunction))
-    print("12.2/ Entropy (my own): ", Gmetric.entropy(inputfile, delimeter, entropyItemsetSize, int(suppValue) / 100, 2))
+    print("12.1/ Entropy (scipy.stats): ", Gmetric.entropy(inputfile, delimeter, entropyItemsetSize, float(suppValue) / 100, entropyFunction))
+    print("12.2/ Entropy (my own): ", Gmetric.entropy(inputfile, delimeter, entropyItemsetSize, float(suppValue) / 100, 2))
 
 
 if __name__ == "__main__":
