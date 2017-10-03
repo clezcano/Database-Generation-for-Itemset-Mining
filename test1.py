@@ -1,3 +1,4 @@
+import matplotlib.pyplot as plt
 import networkx as nx
 from itertools import chain, combinations
 from subprocess import check_output, CalledProcessError
@@ -99,6 +100,7 @@ class metrics:
         return f.number1() / (f.getFileSize() * f.getFileNumElements())
 
     def graphDensity(self):  # Metric 2
+        self.G.clear()
         with open(self.filename, 'r') as f:
             for line in f.readlines():
                 transaction = line.strip().split(self.delimeter)
@@ -220,7 +222,7 @@ def main():
     # delimeter = ","
     input_item_delimeter = '-f"' + delimeter + '"'
     output_item_delimeter = "-k,"
-    suppValue = "50" # positive: percentage of transactions, negative: exact number of transactions
+    suppValue = "5" # positive: percentage of transactions, negative: exact number of transactions
     minimum_support = "-s" + suppValue   # Ex: "-s50" or "-s-50"
     targetype = "-ts"  # frequest (s) maximal (m) closed (c)
     output_format = ''  # empty support information for output result # output_format = '-v" "'  # empty support information for output result
@@ -228,7 +230,7 @@ def main():
     entropyFunction = 1  # 1 scify.stats.entropy, 2 my own
     maximalout = "-"  # "-" for standard output
     # inputfile = "dataset-246.csv"
-    inputfile = "dataset-377.csv"
+    # inputfile = "dataset-377.csv"
     # inputfile = "dataset-1000.csv"
     # inputfile = "dataset-3196.csv"
     # inputfile = "dataset-4141.csv"
@@ -239,18 +241,18 @@ def main():
     # inputfile = "dataset-49046v2.csv"
     # inputfile = "dataset-59602.csv"
     # inputfile = "dataset-67557.csv"
-    # inputfile = "dataset-75000.csv"
+    # inputfile = "dataset-75000.csv"     # ","
     # inputfile = "dataset-77512.csv"
     # inputfile = "dataset-88162.csv"
     # inputfile = "dataset-245057.csv"
     # inputfile = "dataset-340183.csv"
     # inputfile = "dataset-541909.csv"
-    # inputfile = "dataset-574913.csv"
+    # inputfile = "dataset-574913.csv"    # " "
     # inputfile = "dataset-990002.csv"  # "groceries.csv"
-    # inputfile = "dataset-1000000v1.csv"
+    # inputfile = "dataset-1000000v1.csv"  # " "
     # inputfile = "dataset-1000000v2.csv"
-    # inputfile = "dataset-1000000v3.csv"
-    # inputfile = "dataset-1040000.csv"
+    inputfile = "dataset-1000000v3.csv"   # " "
+    # inputfile = "dataset-1040000.csv"   # " "
     # inputfile = "dataset-1112949.csv"
     # inputfile = "dataset-1692082.csv"
     # inputfile = "dataset-5000000.csv"
@@ -270,19 +272,20 @@ def main():
     elements = dataset.getFileElements()
     Gmetric = metrics(inputfile, delimeter)
     print("File name: %s " % (inputfile))
-    print("1/ Data file size: %d " % (dataset.getFileSize()))
-    print("2/ Data file number of elements: %d " % numElem)
-    print("3/ Data file fraction of 1s %: ", Gmetric.fraction1() * 100)
-    print("4/ Data file graph density %: ", Gmetric.graphDensity() * 100)
-    print("5/ Number of frequent itemsets : ", Gmetric.numberOfFreqSets(input_item_delimeter, output_item_delimeter, minimum_support, targetype, output_format, inputfile, maximalout))
-    print("6/ Frequent itemset average support %: ", Gmetric.freqAverageSupport(input_item_delimeter, output_item_delimeter, minimum_support, targetype, output_format, inputfile, maximalout))
-    print("7/ Frequent itemset average length : ", Gmetric.avgFreqSize(input_item_delimeter, output_item_delimeter, minimum_support, targetype, output_format, inputfile, maximalout))
-    print("8/ Frequent itemset maximum length : ", Gmetric.freqMaxLenght(input_item_delimeter, output_item_delimeter, minimum_support, targetype, output_format, inputfile, maximalout))
-    print("9/ Frequent itemset length distribution : [", Gmetric.freqLengthDist(input_item_delimeter, output_item_delimeter, minimum_support, targetype, output_format, inputfile, maximalout, numElem), "]")
-    print("10/ Positive border length distribution : [", Gmetric.freqLengthDist(input_item_delimeter, output_item_delimeter, minimum_support, "-tm", output_format, inputfile, maximalout, numElem), "]")
-    print("11/ Negative border length distribution : [", Gmetric.negativeBorderLengthDist(input_item_delimeter, output_item_delimeter, minimum_support, "-tm", '-v" "', inputfile, maximalout, elements), "]")
-    print("12.1/ Entropy (scipy.stats): ", Gmetric.entropy(inputfile, delimeter, entropyItemsetSize, float(suppValue) / 100, entropyFunction))
-    print("12.2/ Entropy (my own): ", Gmetric.entropy(inputfile, delimeter, entropyItemsetSize, float(suppValue) / 100, 2))
+    # print("1/ Data file size: %d " % (dataset.getFileSize()))
+    # print("2/ Data file number of elements: %d " % numElem)
+    # print("3/ Data file fraction of 1s %: ", Gmetric.fraction1() * 100)
+    # print("4/ Data file graph density %: ", Gmetric.graphDensity() * 100)
+    print("5.1/ Entropy (scipy.stats): ", Gmetric.entropy(inputfile, delimeter, entropyItemsetSize, float(suppValue) / 100, entropyFunction))
+    # print("5.2/ Entropy (my own): ", Gmetric.entropy(inputfile, delimeter, entropyItemsetSize, float(suppValue) / 100, 2))
+    # print("6/ Number of frequent itemsets : ", Gmetric.numberOfFreqSets(input_item_delimeter, output_item_delimeter, minimum_support, targetype, output_format, inputfile, maximalout))
+    # print("7/ Frequent itemset average support %: ", Gmetric.freqAverageSupport(input_item_delimeter, output_item_delimeter, minimum_support, targetype, output_format, inputfile, maximalout))
+    # print("8/ Frequent itemset average length : ", Gmetric.avgFreqSize(input_item_delimeter, output_item_delimeter, minimum_support, targetype, output_format, inputfile, maximalout))
+    # print("9/ Frequent itemset maximum length : ", Gmetric.freqMaxLenght(input_item_delimeter, output_item_delimeter, minimum_support, targetype, output_format, inputfile, maximalout))
+    # print("10/ Frequent itemset length distribution : [", Gmetric.freqLengthDist(input_item_delimeter, output_item_delimeter, minimum_support, targetype, output_format, inputfile, maximalout, numElem), "]")
+    # print("11/ Positive border length distribution : [", Gmetric.freqLengthDist(input_item_delimeter, output_item_delimeter, minimum_support, "-tm", output_format, inputfile, maximalout, numElem), "]")
+    # print("12/ Negative border length distribution : [", Gmetric.negativeBorderLengthDist(input_item_delimeter, output_item_delimeter, minimum_support, "-tm", '-v" "', inputfile, maximalout, elements), "]")
+
 
 
 if __name__ == "__main__":
