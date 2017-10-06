@@ -60,7 +60,7 @@ class DataBase:
         return len(self.database)
 
     def readDB(self, filename, delimeter):
-        self.database.clear()
+        self.database[:] = []
         with open(filename, 'r') as f:
             for line in f.readlines():
                 itemset = ItemSet()
@@ -95,11 +95,11 @@ class metrics:
     def edgeslist(self):
         return self.G.edges()
 
-    def fraction1(self):  # Metric 1
+    def fraction1(self):
         f = InputFile(self.filename, self.delimeter)
         return f.number1() / (f.getFileSize() * f.getFileNumElements())
 
-    def graphDensity(self):  # Metric 2
+    def graphDensity(self):
         self.G.clear()
         with open(self.filename, 'r') as f:
             for line in f.readlines():
@@ -125,24 +125,24 @@ class metrics:
         collection = [itemset.strip() for itemset in temp_collection]  # contains a maximal collection, ex: Mi
         return collection
 
-    def numberOfFreqSets(self, input_item_delimeter, output_item_delimiter, levelsupport, targetype, output_format, inputfile, maximalout):  # Metric 3
+    def numberOfFreqSets(self, input_item_delimeter, output_item_delimiter, levelsupport, targetype, output_format, inputfile, maximalout):  # Metric 6
         return len(self.getFreqSet(input_item_delimeter, output_item_delimiter, levelsupport, targetype, output_format, inputfile, maximalout))
 
-    def freqAverageSupport(self, input_item_delimeter, output_item_delimiter, levelsupport, targetype, output_format, inputfile, maximalout):
+    def freqAverageSupport(self, input_item_delimeter, output_item_delimiter, levelsupport, targetype, output_format, inputfile, maximalout): # Metric 7
         collection = self.getFreqSet(input_item_delimeter, output_item_delimiter, levelsupport, targetype, output_format, inputfile, maximalout)
         sum = 0
         for i in collection:
             sum = sum + float(i.split("(")[1].split(")")[0])
         return sum / len(collection)
 
-    def avgFreqSize(self, input_item_delimeter, output_item_delimiter, levelsupport, targetype, output_format, inputfile, maximalout):
+    def avgFreqSize(self, input_item_delimeter, output_item_delimiter, levelsupport, targetype, output_format, inputfile, maximalout): # Metric 8
         collection = self.getFreqSet(input_item_delimeter, output_item_delimiter, levelsupport, targetype, output_format, inputfile, maximalout)
         sum = 0
         for i in collection:
             sum += len(i.split(","))
         return sum / len(collection)
 
-    def freqMaxLenght(self, input_item_delimeter, output_item_delimiter, levelsupport, targetype, output_format, inputfile, maximalout):
+    def freqMaxLenght(self, input_item_delimeter, output_item_delimiter, levelsupport, targetype, output_format, inputfile, maximalout): # Metric 9
         collection = self.getFreqSet(input_item_delimeter, output_item_delimiter, levelsupport, targetype, output_format, inputfile, maximalout)
         max = 0
         for i in collection:
@@ -151,7 +151,7 @@ class metrics:
                 max = aux
         return max
 
-    def lengthDist_str(self, collection, numElem):
+    def lengthDist_str(self, collection, numElem): # Metric 10
         dist = [0] * (numElem + 1)
         for i in collection:
             dist[len(i.split(","))] += 1
@@ -160,7 +160,7 @@ class metrics:
             aux += (str(_) + ", ")
         return aux
 
-    def lengthDist_int(self, collection, numElem):
+    def lengthDist_int(self, collection, numElem): # Metric 10
         dist = [0] * (numElem + 1)
         for i in collection:
             dist[len(i)] += 1
@@ -191,27 +191,15 @@ class metrics:
         return self.lengthDist_int(minTransv, numElem)
 
     def calculateEntropy(self, prob):
-        return -sum([p * np.log2(p) for p in prob if p > 0])
+        return -sum((p * np.log2(p) for p in prob if p > 0))
 
     def entropy(self, filename, delimeter, itemsetSize, minsup, fun): # fun defines use of build-in entropy or my own
         db = DataBase()
         db.readDB(filename, delimeter)
         dbElem = db.getDBElements()
         dbSize = db.size()
-        kItemsets = [set(itemset) for itemset in combinations(dbElem, itemsetSize)]
-        # print("itemsets : ", kItemsets)
-        # print("length : ", len(kItemsets))
-        kItemsetSup = [db.getItemsetSup(itemset) for itemset in kItemsets] # getItemsetSup() returns only the number of transactions,i.e. support
-        # print("supports : ", kItemsetSup)
-        # kItemsetFreq = list(filter(lambda x: x > minsup, [float(itemsetSup / dbSize) for itemsetSup in kItemsetSup]))
-        # kItemsetFreq = list(filter(lambda x: x > 0, [float(itemsetSup / dbSize) for itemsetSup in kItemsetSup]))
-        kItemsetFreq = [float(itemsetSup) / dbSize for itemsetSup in kItemsetSup]
-        # print("Freq ", fun, " frequencies : [", kItemsetFreq, "]")
-        sumFreq = sum(kItemsetFreq)
-        # print("Freq sum :", sumFreq)
-        # print("Freq len :", len(kItemsets))
-        kItemsetProb = [itemsetFreq / sumFreq for itemsetFreq in kItemsetFreq]
-        # print("Prob sum :", sum(kItemsetProb))
+        sumFreq = sum((float(db.getItemsetSup(set(itemset))) / dbSize for itemset in combinations(dbElem, itemsetSize)))
+        kItemsetProb = ((float(db.getItemsetSup(set(itemset))) / dbSize) / sumFreq for itemset in combinations(dbElem, itemsetSize))
         if fun == 1:
             return entropy(kItemsetProb, base=2)
         elif fun == 2:
@@ -233,25 +221,25 @@ def main():
     # inputfile = "dataset-377.csv"
     # inputfile = "dataset-1000.csv"
     # inputfile = "dataset-3196.csv"
-    # inputfile = "dataset-4141.csv"
+    # inputfile = "dataset-4141.csv" # " "
     # inputfile = "dataset-5000.csv"
     # inputfile = "dataset-8124.csv"
     # inputfile = "dataset-20000.csv"
-    # inputfile = "dataset-49046v1.csv"
-    # inputfile = "dataset-49046v2.csv"
-    # inputfile = "dataset-59602.csv"
+    # inputfile = "dataset-49046v1.csv"  # " "
+    # inputfile = "dataset-49046v2.csv"  # " "
+    # inputfile = "dataset-59602.csv"   # " "
     # inputfile = "dataset-67557.csv"
     # inputfile = "dataset-75000.csv"     # ","
     # inputfile = "dataset-77512.csv"
-    # inputfile = "dataset-88162.csv"
+    # inputfile = "dataset-88162.csv"     # " "
     # inputfile = "dataset-245057.csv"
-    # inputfile = "dataset-340183.csv"
-    # inputfile = "dataset-541909.csv"
+    # inputfile = "dataset-340183.csv"   # " "
+    inputfile = "dataset-541909.csv"   # " "
     # inputfile = "dataset-574913.csv"    # " "
     # inputfile = "dataset-990002.csv"  # "groceries.csv"
     # inputfile = "dataset-1000000v1.csv"  # " "
     # inputfile = "dataset-1000000v2.csv"
-    inputfile = "dataset-1000000v3.csv"   # " "
+    # inputfile = "dataset-1000000v3.csv"   # " "
     # inputfile = "dataset-1040000.csv"   # " "
     # inputfile = "dataset-1112949.csv"
     # inputfile = "dataset-1692082.csv"
@@ -276,8 +264,8 @@ def main():
     # print("2/ Data file number of elements: %d " % numElem)
     # print("3/ Data file fraction of 1s %: ", Gmetric.fraction1() * 100)
     # print("4/ Data file graph density %: ", Gmetric.graphDensity() * 100)
-    print("5.1/ Entropy (scipy.stats): ", Gmetric.entropy(inputfile, delimeter, entropyItemsetSize, float(suppValue) / 100, entropyFunction))
-    # print("5.2/ Entropy (my own): ", Gmetric.entropy(inputfile, delimeter, entropyItemsetSize, float(suppValue) / 100, 2))
+    # print("5.1/ Entropy (scipy.stats): ", Gmetric.entropy(inputfile, delimeter, entropyItemsetSize, float(suppValue) / 100, entropyFunction))
+    print("5.2/ Entropy (my own): ", Gmetric.entropy(inputfile, delimeter, entropyItemsetSize, float(suppValue) / 100, 2))
     # print("6/ Number of frequent itemsets : ", Gmetric.numberOfFreqSets(input_item_delimeter, output_item_delimeter, minimum_support, targetype, output_format, inputfile, maximalout))
     # print("7/ Frequent itemset average support %: ", Gmetric.freqAverageSupport(input_item_delimeter, output_item_delimeter, minimum_support, targetype, output_format, inputfile, maximalout))
     # print("8/ Frequent itemset average length : ", Gmetric.avgFreqSize(input_item_delimeter, output_item_delimeter, minimum_support, targetype, output_format, inputfile, maximalout))
