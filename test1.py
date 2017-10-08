@@ -137,10 +137,12 @@ class metrics:
 
     def avgFreqSize(self, input_item_delimeter, output_item_delimiter, levelsupport, targetype, output_format, inputfile, maximalout): # Metric 8
         collection = self.getFreqSet(input_item_delimeter, output_item_delimiter, levelsupport, targetype, output_format, inputfile, maximalout)
+        collectionSize = len(collection)
         sum = 0
         for i in collection:
             sum += len(i.split(","))
-        return sum / len(collection)
+        collection.clear()
+        return sum / collectionSize
 
     def freqMaxLenght(self, input_item_delimeter, output_item_delimiter, levelsupport, targetype, output_format, inputfile, maximalout): # Metric 9
         collection = self.getFreqSet(input_item_delimeter, output_item_delimiter, levelsupport, targetype, output_format, inputfile, maximalout)
@@ -179,15 +181,34 @@ class metrics:
         collection = self.getFreqSet(input_item_delimeter, output_item_delimiter, levelsupport, targetype, output_format, inputfile, maximalout)
         return self.lengthDist_str(collection, numElem)
 
+    def negativeBorderAvgSize(self, input_item_delimeter, output_item_delimiter, levelsupport, targetype, output_format, inputfile, maximalout, elements):
+        maximalFreq_string = self.getFreqSet(input_item_delimeter, output_item_delimiter, levelsupport, targetype, output_format, inputfile, maximalout)
+        maximalFreq_int = (self.strToIn_itemset(itemset) for itemset in maximalFreq_string)
+        maximalFreq_string.clear()
+        h = hypergraph()
+        for i in (elements.difference(itemset) for itemset in maximalFreq_int):
+            h.added(i)
+        minTransv = h.transv().hyedges
+        print("minTransv : ", minTransv)
+        minTransvSize = len(minTransv)
+        sum = 0
+        for i in minTransv:
+            # print("i : ", i)
+            sum += len(i)
+        minTransv.clear()
+        # print("sum : ", sum)
+        # print("minTransvSize : ", minTransvSize)
+        return sum / minTransvSize
+
     def negativeBorderLengthDist(self, input_item_delimeter, output_item_delimiter, levelsupport, targetype, output_format, inputfile, maximalout, elements):
         numElem = len(elements)
         maximalFreq_string = self.getFreqSet(input_item_delimeter, output_item_delimiter, levelsupport, targetype, output_format, inputfile, maximalout)
-        maximalFreq_int = [self.strToIn_itemset(itemset) for itemset in maximalFreq_string]
+        maximalFreq_int = (self.strToIn_itemset(itemset) for itemset in maximalFreq_string)
+        maximalFreq_string.clear()
         h = hypergraph()
-        for i in [elements.difference(itemset) for itemset in maximalFreq_int]:
+        for i in (elements.difference(itemset) for itemset in maximalFreq_int):
             h.added(i)
         minTransv = h.transv().hyedges
-        # print("minTransv : ", minTransv)
         return self.lengthDist_int(minTransv, numElem)
 
     def calculateEntropy(self, prob):
@@ -198,8 +219,12 @@ class metrics:
         db.readDB(filename, delimeter)
         dbElem = db.getDBElements()
         dbSize = db.size()
-        sumFreq = sum((float(db.getItemsetSup(set(itemset))) / dbSize for itemset in combinations(dbElem, itemsetSize)))
-        kItemsetProb = ((float(db.getItemsetSup(set(itemset))) / dbSize) / sumFreq for itemset in combinations(dbElem, itemsetSize))
+
+        kItemsetFreq = [float(db.getItemsetSup(set(itemset))) / dbSize for itemset in combinations(dbElem, itemsetSize)]
+        sumFreq = sum(kItemsetFreq)
+        kItemsetProb = (itemsetFreq / sumFreq for itemsetFreq in kItemsetFreq)
+        kItemsetFreq.clear()
+        db.getDataBase().clear()
         if fun == 1:
             return entropy(kItemsetProb, base=2)
         elif fun == 2:
@@ -210,14 +235,14 @@ def main():
     # delimeter = ","
     input_item_delimeter = '-f"' + delimeter + '"'
     output_item_delimeter = "-k,"
-    suppValue = "5" # positive: percentage of transactions, negative: exact number of transactions
+    suppValue = "50" # positive: percentage of transactions, negative: exact number of transactions
     minimum_support = "-s" + suppValue   # Ex: "-s50" or "-s-50"
     targetype = "-ts"  # frequest (s) maximal (m) closed (c)
     output_format = ''  # empty support information for output result # output_format = '-v" "'  # empty support information for output result
     entropyItemsetSize = 2
     entropyFunction = 1  # 1 scify.stats.entropy, 2 my own
     maximalout = "-"  # "-" for standard output
-    # inputfile = "dataset-246.csv"
+    inputfile = "dataset-246.csv"  # " "
     # inputfile = "dataset-377.csv"
     # inputfile = "dataset-1000.csv"
     # inputfile = "dataset-3196.csv"
@@ -234,7 +259,7 @@ def main():
     # inputfile = "dataset-88162.csv"     # " "
     # inputfile = "dataset-245057.csv"
     # inputfile = "dataset-340183.csv"   # " "
-    inputfile = "dataset-541909.csv"   # " "
+    # inputfile = "dataset-541909.csv"   # " "
     # inputfile = "dataset-574913.csv"    # " "
     # inputfile = "dataset-990002.csv"  # "groceries.csv"
     # inputfile = "dataset-1000000v1.csv"  # " "
@@ -256,7 +281,7 @@ def main():
     # print("edgelist :", len(Gmetric.edgeslist()))
 
     dataset = InputFile(inputfile, delimeter)
-    numElem = dataset.getFileNumElements()
+    # numElem = dataset.getFileNumElements()
     elements = dataset.getFileElements()
     Gmetric = metrics(inputfile, delimeter)
     print("File name: %s " % (inputfile))
@@ -265,14 +290,13 @@ def main():
     # print("3/ Data file fraction of 1s %: ", Gmetric.fraction1() * 100)
     # print("4/ Data file graph density %: ", Gmetric.graphDensity() * 100)
     # print("5.1/ Entropy (scipy.stats): ", Gmetric.entropy(inputfile, delimeter, entropyItemsetSize, float(suppValue) / 100, entropyFunction))
-    print("5.2/ Entropy (my own): ", Gmetric.entropy(inputfile, delimeter, entropyItemsetSize, float(suppValue) / 100, 2))
-    # print("6/ Number of frequent itemsets : ", Gmetric.numberOfFreqSets(input_item_delimeter, output_item_delimeter, minimum_support, targetype, output_format, inputfile, maximalout))
-    # print("7/ Frequent itemset average support %: ", Gmetric.freqAverageSupport(input_item_delimeter, output_item_delimeter, minimum_support, targetype, output_format, inputfile, maximalout))
-    # print("8/ Frequent itemset average length : ", Gmetric.avgFreqSize(input_item_delimeter, output_item_delimeter, minimum_support, targetype, output_format, inputfile, maximalout))
-    # print("9/ Frequent itemset maximum length : ", Gmetric.freqMaxLenght(input_item_delimeter, output_item_delimeter, minimum_support, targetype, output_format, inputfile, maximalout))
-    # print("10/ Frequent itemset length distribution : [", Gmetric.freqLengthDist(input_item_delimeter, output_item_delimeter, minimum_support, targetype, output_format, inputfile, maximalout, numElem), "]")
-    # print("11/ Positive border length distribution : [", Gmetric.freqLengthDist(input_item_delimeter, output_item_delimeter, minimum_support, "-tm", output_format, inputfile, maximalout, numElem), "]")
-    # print("12/ Negative border length distribution : [", Gmetric.negativeBorderLengthDist(input_item_delimeter, output_item_delimeter, minimum_support, "-tm", '-v" "', inputfile, maximalout, elements), "]")
+    # print("5.2/ Entropy (my own): ", Gmetric.entropy(inputfile, delimeter, entropyItemsetSize, float(suppValue) / 100, 2))
+    print("6/ # FI : ", Gmetric.numberOfFreqSets(input_item_delimeter, output_item_delimeter, minimum_support, targetype, output_format, inputfile, maximalout))
+    print("7/ FI average support %: ", Gmetric.freqAverageSupport(input_item_delimeter, output_item_delimeter, minimum_support, targetype, output_format, inputfile, maximalout))
+    print("8/ FI average length : ", Gmetric.avgFreqSize(input_item_delimeter, output_item_delimeter, minimum_support, targetype, output_format, inputfile, maximalout))
+    print("9/ FI maximum length : ", Gmetric.freqMaxLenght(input_item_delimeter, output_item_delimeter, minimum_support, targetype, output_format, inputfile, maximalout))
+    print("10/ (+) Border average length: ", Gmetric.avgFreqSize(input_item_delimeter, output_item_delimeter, minimum_support, "-tm", output_format, inputfile, maximalout))
+    print("11/ (-) Border average length: ", Gmetric.negativeBorderAvgSize(input_item_delimeter, output_item_delimeter, minimum_support, "-tm", '-v" "', inputfile, maximalout, elements))
 
 
 
