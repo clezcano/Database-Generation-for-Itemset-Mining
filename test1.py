@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import networkx as nx
+from sys import platform
 from itertools import chain, combinations
 from subprocess import check_output, CalledProcessError
 from hypergraph import *
@@ -117,12 +118,17 @@ class metrics:
 
     def getFreqSet(self, input_item_delimeter, output_item_delimiter, levelsupport, targetype, output_format, inputfile, maximalout):
         try:
-            command = "eclat.exe" + " " + input_item_delimeter + " " + output_item_delimiter + " " + levelsupport + " " + targetype + " " + output_format + " " + inputfile + " " + maximalout
-            # print("command eclat: ", command)
-            temp_collection = check_output(command).decode("utf-8").strip().split("\n")  # contains the maximal itemset list with useless space characters
+            if platform == "win32":
+                command = "eclat.exe" + " " + input_item_delimeter + " " + output_item_delimiter + " " + levelsupport + " " + targetype + " " + output_format + " " + inputfile + " " + maximalout
+                # print("command eclat: ", command)
+                temp_collection = check_output(command).decode("utf-8").strip().split("\n")  # contains the maximal itemset list with useless space characters
+            elif platform == "linux" or platform == "linux2":
+                command = "./eclat" + " " + input_item_delimeter + " " + output_item_delimiter + " " + levelsupport + " " + targetype + " " + output_format + " " + inputfile + " " + maximalout
+                temp_collection = check_output(command, shell=True).decode("utf-8").strip().split("\n")  # contains the maximal itemset list with useless space characters
         except CalledProcessError as e:
             exit("Eclat has failed running with minimum support: %s Return code: %d Output: %s" % (levelsupport, e.returncode, e.output.decode("utf-8")))
         collection = [itemset.strip() for itemset in temp_collection]  # contains a maximal collection, ex: Mi
+        temp_collection.clear()
         return collection
 
     def numberOfFreqSets(self, input_item_delimeter, output_item_delimiter, levelsupport, targetype, output_format, inputfile, maximalout):  # Metric 6
@@ -142,6 +148,7 @@ class metrics:
         for i in collection:
             sum += len(i.split(","))
         collection.clear()
+        print("collectionSize : ", collectionSize)
         return sum / collectionSize
 
     def freqMaxLenght(self, input_item_delimeter, output_item_delimiter, levelsupport, targetype, output_format, inputfile, maximalout): # Metric 9
@@ -184,20 +191,20 @@ class metrics:
     def negativeBorderAvgSize(self, input_item_delimeter, output_item_delimiter, levelsupport, targetype, output_format, inputfile, maximalout, elements):
         maximalFreq_string = self.getFreqSet(input_item_delimeter, output_item_delimiter, levelsupport, targetype, output_format, inputfile, maximalout)
         maximalFreq_int = (self.strToIn_itemset(itemset) for itemset in maximalFreq_string)
-        maximalFreq_string.clear()
         h = hypergraph()
-        for i in (elements.difference(itemset) for itemset in maximalFreq_int):
+        transvInput = (elements.difference(itemset) for itemset in maximalFreq_int)
+        for i in transvInput:
             h.added(i)
+        maximalFreq_string.clear()
         minTransv = h.transv().hyedges
-        print("minTransv : ", minTransv)
         minTransvSize = len(minTransv)
         sum = 0
-        for i in minTransv:
-            # print("i : ", i)
-            sum += len(i)
+        for j in minTransv:
+            # print("j : ", j)
+            sum += len(j)
         minTransv.clear()
-        # print("sum : ", sum)
-        # print("minTransvSize : ", minTransvSize)
+        print("sum : ", sum)
+        print("minTransvSize : ", minTransvSize)
         return sum / minTransvSize
 
     def negativeBorderLengthDist(self, input_item_delimeter, output_item_delimiter, levelsupport, targetype, output_format, inputfile, maximalout, elements):
@@ -235,24 +242,24 @@ def main():
     # delimeter = ","
     input_item_delimeter = '-f"' + delimeter + '"'
     output_item_delimeter = "-k,"
-    suppValue = "50" # positive: percentage of transactions, negative: exact number of transactions
+    suppValue = "10" # positive: percentage of transactions, negative: exact number of transactions
     minimum_support = "-s" + suppValue   # Ex: "-s50" or "-s-50"
     targetype = "-ts"  # frequest (s) maximal (m) closed (c)
     output_format = ''  # empty support information for output result # output_format = '-v" "'  # empty support information for output result
     entropyItemsetSize = 2
     entropyFunction = 1  # 1 scify.stats.entropy, 2 my own
     maximalout = "-"  # "-" for standard output
-    inputfile = "dataset-246.csv"  # " "
-    # inputfile = "dataset-377.csv"
-    # inputfile = "dataset-1000.csv"
-    # inputfile = "dataset-3196.csv"
-    # inputfile = "dataset-4141.csv" # " "
+    # inputfile = "dataset-246.csv"      # " "
+    inputfile = "dataset-377.csv"        # " "
+    # inputfile = "dataset-1000.csv"     # ","
+    # inputfile = "dataset-3196.csv"     # " "
+    # inputfile = "dataset-4141.csv"     # " "
     # inputfile = "dataset-5000.csv"
     # inputfile = "dataset-8124.csv"
     # inputfile = "dataset-20000.csv"
     # inputfile = "dataset-49046v1.csv"  # " "
     # inputfile = "dataset-49046v2.csv"  # " "
-    # inputfile = "dataset-59602.csv"   # " "
+    # inputfile = "dataset-59602.csv"    # " "
     # inputfile = "dataset-67557.csv"
     # inputfile = "dataset-75000.csv"     # ","
     # inputfile = "dataset-77512.csv"
