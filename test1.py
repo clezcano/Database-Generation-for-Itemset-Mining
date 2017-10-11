@@ -3,9 +3,12 @@ import networkx as nx
 from sys import platform
 from itertools import chain, combinations
 from subprocess import check_output, CalledProcessError
+import sys
 from hypergraph import *
 from scipy.stats import entropy
 import numpy as np
+
+
 
 class InputFile:
     def __init__(self, filename, delimeter):
@@ -250,11 +253,11 @@ def main():
     entropyFunction = 1  # 1 scify.stats.entropy, 2 my own
     maximalout = "-"  # "-" for standard output
     # inputfile = "dataset-246.csv"      # " "
-    inputfile = "dataset-377.csv"        # " "
+    # inputfile = "dataset-377.csv"        # " "
     # inputfile = "dataset-1000.csv"     # ","
     # inputfile = "dataset-3196.csv"     # " "
     # inputfile = "dataset-4141.csv"     # " "
-    # inputfile = "dataset-5000.csv"
+    inputfile = "dataset-5000.csv"       # ","
     # inputfile = "dataset-8124.csv"
     # inputfile = "dataset-20000.csv"
     # inputfile = "dataset-49046v1.csv"  # " "
@@ -286,7 +289,7 @@ def main():
     # print("number of nodes : ", len(Gmetric.nodeslist()))
     # print("edgelist :", Gmetric.edgeslist())
     # print("edgelist :", len(Gmetric.edgeslist()))
-
+    sys.setrecursionlimit(2500)
     dataset = InputFile(inputfile, delimeter)
     # numElem = dataset.getFileNumElements()
     elements = dataset.getFileElements()
