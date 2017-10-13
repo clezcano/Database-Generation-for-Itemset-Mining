@@ -23,11 +23,11 @@ dataset-340183.csv 		http://fimi.ua.ac.be/data/ 																			  accidents
 dataset-541909.csv	    http://www.philippe-fournier-viger.com/spmf/index.php?link=datasets.php	                              OnlineRetail																			
 dataset-574913.csv      http://www.philippe-fournier-viger.com/spmf/index.php?link=datasets.php 							  RecordLink														
 dataset-990002.csv 		http://fimi.ua.ac.be/data/ 	http://www.philippe-fournier-viger.com/spmf/index.php?link=datasets.php	  kosarak																	
-dataset-1112949.csv	    http://www.philippe-fournier-viger.com/spmf/index.php?link=datasets.php	                              chainstore																			
-dataset-1692082.csv     http://fimi.ua.ac.be/data/                                                                            webdocs																					
 dataset-1000000v1.csv	http://www.philippe-fournier-viger.com/spmf/index.php?link=datasets.php	                              kddcup99																			
 dataset-1000000v2.csv   http://www.philippe-fournier-viger.com/spmf/index.php?link=datasets.php 							  PAMP														
 dataset-1000000v3.csv   http://www.philippe-fournier-viger.com/spmf/index.php?link=datasets.php 							  USCensus														
 dataset-1040000.csv     http://www.philippe-fournier-viger.com/spmf/index.php?link=datasets.php 							  PowerC														
+dataset-1112949.csv	    http://www.philippe-fournier-viger.com/spmf/index.php?link=datasets.php	                              chainstore																			
+dataset-1692082.csv     http://fimi.ua.ac.be/data/                                                                            webdocs																					
 dataset-5000000.csv     http://www.philippe-fournier-viger.com/spmf/index.php?link=datasets.php 							  Susy 														
 
