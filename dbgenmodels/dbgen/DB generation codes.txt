@@ -1,0 +1,29 @@
+Te paso el zip, verás varias carpetas. Te explico la estructura:
+
+
+dbgen.py 	- programa principal en python (todo el código está aquí)
+db/			- directorio donde se van poniendo las BBDD ahí verás la original (groceries.csv), y las dos generadas con los dos métodos (lda y iim)
+exe/			- directorior donde están los ejecutables (eclat, tendrás que poner la verisión que te vaya bien a tí ya  
+				que yo tengo la del MAC, y también un .jar con el código para el modelo iim
+models/		- directorio donde se guardan los modelos “aprendidos” de las BBDD. Lo que tú has llamado “resumen”; 
+				lo voy guardando porque tarda bastante en ser generados
+out/			- directorio donde se guardan los resultados de FIM, en este caso hay 3 salidas de eclat, de la base de 
+				datos origina, más las dos sintéticas (lda y iim)
+
+
+verás algún fichero más que puedes ignorar…
+
+
+El modelo LDA viene descrito en este paper:
+http://www.jmlr.org/papers/volume3/blei03a/blei03a.pdf
+
+El modelo IIM viene descrito en este paper (me ha parecido súper interesante):
+http://rdcu.be/z5Vv
+
+Otro paper interesante enfocado a la generación de texto en lenguaje natural es:
+https://aclanthology.info/pdf/W/W15/W15-2922.pdf
+Este paper tiene un “objetivo” similar al nuestro, y tiene implementados varios modelos y luego los compara.
+
+
+El zip lo puedes encontar aquí:
+https://www.dropbox.com/s/6t3j2ay1jyp6t6c/dbgen.zip?dl=0
