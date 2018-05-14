@@ -78,7 +78,7 @@ def eclat(infname):
 
     bname = os.path.splitext(os.path.basename(infname))[0]
     outfname = "out/eclat-{}.itemsets".format(bname)
-    cmd = ["exe/eclat", "-f,", "-s{}".format(args.minsup), "-k,", "-Z", infname, outfname]
+    cmd = ["exe/eclat", "-f,", "-s{}".format(args.minsup), "-k,", "-Z", infname, outfname] # -Z prints number of items per size
 
     fd, temp_path = tempfile.mkstemp()
 
@@ -327,6 +327,65 @@ class LDALearnGen:
 
         return self.newdbfile
 
+class IGMGen:
+    """
+       This DB Generator (IGM) is based on the model described in the paper
+       "Connection between mining frequent itemsets and learning generative models" by Laxman et.al.
+    """
+
+    def __init__(self, indb):
+        self.dbfile = indb
+        self.newdbfile = "db/igm-" + os.path.basename(indb)
+        self.modelfname = None  # to be determined on learn execution, depends on parameters
+        self.iims = None
+        self.wordtoid = dict()
+        self.idtoword = dict()
+        # translate to FIMI
+        self.fimifile = "db/igm-" + os.path.splitext(os.path.basename(indb))[0] + ".fimi"
+        self.m = 0  # nr of transactions in the original db (FIMI db)
+
+        with open(self.fimifile, 'w') as outf:
+            nextid = 1
+            with open(args.dbfile) as inf:
+                for row in inf:
+                    transaction = [item.strip().replace(" ", "_") for item in row.strip().split(',')]
+                    for item in transaction:
+                        if item not in self.wordtoid:
+                            self.wordtoid[item] = nextid
+                            self.idtoword[nextid] = item
+                            nextid += 1
+                    # write transaction to fimi file
+                    fimi_transaction = sorted([self.wordtoid[item] for item in transaction])
+                    logging.debug("translating transaction {} to FIMI format as {}".format(transaction, fimi_transaction))
+                    outf.write(" ".join([str(x) for x in fimi_transaction]) + "\n")
+                    self.m += 1
+
+        logging.info("translated input file {} to fimi format in {}; {} transactions found with {} items".format(self.dbfile, self.fimifile, self.m, len(self.wordtoid)))
+
+    @print_timing
+    def gen(self):
+        with open(self.newdbfile, 'w') as outf:
+            ntrans = 0
+            for i in range(self.m):
+                newtrans = []
+                for (items, p) in self.iims:
+                    # bernoulli trial
+                    if np.random.binomial(1, p):
+                        logging.debug("===> adding iim {} to current transaction {}".format(items, i))
+                        newtrans += items
+                newitems = ",".join(sorted(newtrans))
+                if len(newtrans):
+                    outf.write(newitems + "\n")
+                    logging.debug("writing transaction to new db: {}".format(newitems))
+                    ntrans += 1
+                # REPORT progress
+                if i and i % 1000 == 0:
+                    logging.info("\tprocessed {} transactions of {} ({:0.1f}%).".format(i, self.m, 100.0*i/self.m))
+
+        logging.info("wrote synthetic database to file {}, with {} transactions ({:0.1f}%)".format(self.newdbfile, ntrans, 100.0*ntrans/self.m))
+
+        return self.newdbfile
+
 if __name__ == '__main__':
 
     # arguments setup
@@ -354,6 +413,7 @@ if __name__ == '__main__':
     K = eclat(args.dbfile)
     logging.info("Nr of frequent itemsets found is: '{}' (future K for lda generator)".format(K))
 
+
     # now, run first generator model (lda) and then eclat on synthetic db
     lda = LDALearnGen(args.dbfile)
     lda.learn(K, args.lda_passes)
@@ -365,3 +425,8 @@ if __name__ == '__main__':
     iim.learn(args.iim_passes)
     iim.gen()
     eclat(iim.newdbfile)
+
+    # IGM generator model (igm)
+    igm = IGMGen(args.dbfile)
+    igm.gen()
+    eclat(igm.newdbfile)
