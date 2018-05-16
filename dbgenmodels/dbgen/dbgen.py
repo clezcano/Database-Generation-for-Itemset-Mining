@@ -336,53 +336,115 @@ class IGMGen:
     def __init__(self, indb):
         self.dbfile = indb
         self.newdbfile = "db/igm-" + os.path.basename(indb)
-        self.modelfname = None  # to be determined on learn execution, depends on parameters
-        self.iims = None
-        self.wordtoid = dict()
-        self.idtoword = dict()
-        # translate to FIMI
-        self.fimifile = "db/igm-" + os.path.splitext(os.path.basename(indb))[0] + ".fimi"
-        self.m = 0  # nr of transactions in the original db (FIMI db)
+        self.modelfname = None     # to be determined on learn execution, depends on parameters
+        self.K = None
+        self.npasses = None
+        self.igmModel = None             # model parameters
+        self.dictionary = None      # link between item descriptions and ids
+        # parse input file, figure out various statistics from dbfile
+        self.db = []
+        items = set()
+        with open(args.dbfile) as infile:
+            for row in infile:
+                transaction = [item.strip().replace(" ", "_") for item in row.strip().split(',')]
+                items |= set(transaction)
+                self.db.append(sorted(transaction))
 
-        with open(self.fimifile, 'w') as outf:
-            nextid = 1
-            with open(args.dbfile) as inf:
-                for row in inf:
-                    transaction = [item.strip().replace(" ", "_") for item in row.strip().split(',')]
-                    for item in transaction:
-                        if item not in self.wordtoid:
-                            self.wordtoid[item] = nextid
-                            self.idtoword[nextid] = item
-                            nextid += 1
-                    # write transaction to fimi file
-                    fimi_transaction = sorted([self.wordtoid[item] for item in transaction])
-                    logging.debug("translating transaction {} to FIMI format as {}".format(transaction, fimi_transaction))
-                    outf.write(" ".join([str(x) for x in fimi_transaction]) + "\n")
-                    self.m += 1
+        logging.info("Nr of transactions in {}: {}, Nr. of items: {}".format(args.dbfile, len(self.db), len(items)))
 
-        logging.info("translated input file {} to fimi format in {}; {} transactions found with {} items".format(self.dbfile, self.fimifile, self.m, len(self.wordtoid)))
+    def load(self):
+        self.igm = []
+        with open(self.modelfname) as inf:
+            # template of the model file:
+            #   skin_care
+            #   0.00356
+            #   nuts / prunes
+            #   0.00336
+            #   tidbits
+            #   0.00234
+            #   bottled_beer, liquor, red / blush_wine
+            #   0.00193
+            for line in inf:
+                itemset = line.strip().split(",")
+                prob = float(inf.readline().strip())
+                self.igm.append((itemset, prob))
+        logging.info("loaded IGM model from file {}".format(self.modelfname))
+
+
+    def save(self):
+        """ saves state to model file """
+        with open(self.modelfname, 'w') as outf:
+            for (itemset, p) in self.igm:
+                outf.write(",".join(itemset) + "\n")
+                outf.write(str(p) + "\n")
+        logging.info("wrote IGM model file to {}".format(self.modelfname))
+
+    def filterFi(self, fi):
+        fi = []
+        return fi
+
+    @print_timing
+    def getFI(self, infname):
+        """
+        runs eclat on input db
+        prints the frequent itemsets on a file and returns them as well
+
+        """
+        bname = os.path.splitext(os.path.basename(infname))[0]
+        outfname = "out/eclat-{}.itemsets".format(bname)
+        cmd = ["exe/eclat", "-f,", "-s{}".format(args.minsup), "-k,", infname, outfname]
+        logging.info("running eclat command: {} over the input file".format(" ".join(cmd), infname))
+        call(cmd)
+        logging.info("wrote frequent itemsets in file {}".format(outfname))
+        fi = []
+        with open(outfname) as fiFile:
+            for line in fiFile:
+                itemset = line.strip().split(",")
+                freq = float(fiFile.readline().strip())
+                fi.append((itemset, freq))
+        logging.info("loaded frequent itemsets from file {}".format(outfname))
+        return fi
+
+    @print_timing
+    def learn(self, minsup):
+        self.modelfname = "models/igmmodel_minsup{}".format(minsup)
+        if os.path.exists(self.modelfname):
+            self.load()
+        else:
+            logging.info("running IGM inference; minsup = {}".format(minsup))
+
+        fi = self.getFI(minsup) # get the frequent itemsets
+        self.igmModel = self.filterFi(fi)
+
+        with open(self.modelfname, 'w') as modelFile:
+            for (itemset, p) in self.igmModel:
+                modelFile.write(",".join(itemset) + "\n")
+                modelFile.write(str(p) + "\n")
+        logging.info("wrote IGM model file to {}".format(self.modelfname))
+
+        return len(self.igmModel)
 
     @print_timing
     def gen(self):
-        with open(self.newdbfile, 'w') as outf:
+        with open(self.newdbfile, 'w') as genFile:
             ntrans = 0
-            for i in range(self.m):
+            for i in range(len(self.db)):
                 newtrans = []
-                for (items, p) in self.iims:
+                for (itemset, p) in self.igmModel:
                     # bernoulli trial
                     if np.random.binomial(1, p):
-                        logging.debug("===> adding iim {} to current transaction {}".format(items, i))
-                        newtrans += items
+                        logging.debug("===> adding iim {} to current transaction {}".format(itemset, i))
+                        newtrans += itemset
                 newitems = ",".join(sorted(newtrans))
                 if len(newtrans):
-                    outf.write(newitems + "\n")
+                    genFile.write(newitems + "\n")
                     logging.debug("writing transaction to new db: {}".format(newitems))
                     ntrans += 1
                 # REPORT progress
                 if i and i % 1000 == 0:
-                    logging.info("\tprocessed {} transactions of {} ({:0.1f}%).".format(i, self.m, 100.0*i/self.m))
+                    logging.info("\tprocessed {} transactions of {} ({:0.1f}%).".format(i, len(self.db), 100.0*i/len(self.db)))
 
-        logging.info("wrote synthetic database to file {}, with {} transactions ({:0.1f}%)".format(self.newdbfile, ntrans, 100.0*ntrans/self.m))
+        logging.info("wrote synthetic database to file {}, with {} transactions ({:0.1f}%)".format(self.newdbfile, ntrans, 100.0*ntrans/len(self.db)))
 
         return self.newdbfile
 
@@ -428,5 +490,6 @@ if __name__ == '__main__':
 
     # IGM generator model (igm)
     igm = IGMGen(args.dbfile)
+    igm.learn(args.minsup)
     igm.gen()
     eclat(igm.newdbfile)
