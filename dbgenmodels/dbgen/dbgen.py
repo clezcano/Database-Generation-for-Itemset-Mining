@@ -424,18 +424,23 @@ class IGMGen:
 
         return len(self.igmModel)
 
+    def chooseFreqItemset(self):
+        for j, x in enumerate(np.random.multinomial(1, [p for (itemset, p) in self.igmModel])):
+            if x:
+                return j
+
     @print_timing
     def gen(self):
         with open(self.newdbfile, 'w') as genFile:
             ntrans = 0
             for i in range(len(self.db)):
                 newtrans = []
-                for (itemset, p) in self.igmModel:
-                    # bernoulli trial
-                    if np.random.binomial(1, p):
-                        logging.debug("===> adding iim {} to current transaction {}".format(itemset, i))
-                        newtrans += itemset
+                j = self.chooseFreqItemset()
+                p = self.choosePattern()
+                n = self.chooseNoise()
+                newtrans = p | n
                 newitems = ",".join(sorted(newtrans))
+                logging.debug("===> generating transaction nr: {}; freq. itemset selected: {}; pattern selected: {}; noise pattern selected: {}".format(i, j ,p, n))
                 if len(newtrans):
                     genFile.write(newitems + "\n")
                     logging.debug("writing transaction to new db: {}".format(newitems))
@@ -444,8 +449,7 @@ class IGMGen:
                 if i and i % 1000 == 0:
                     logging.info("\tprocessed {} transactions of {} ({:0.1f}%).".format(i, len(self.db), 100.0*i/len(self.db)))
 
-        logging.info("wrote synthetic database to file {}, with {} transactions ({:0.1f}%)".format(self.newdbfile, ntrans, 100.0*ntrans/len(self.db)))
-
+        logging.info("wrote synthetic database to file {}, with {} transactions ({:0.1f}%)".format(self.newdbfile, ntrans, 100.0 * ntrans / len(self.db)))
         return self.newdbfile
 
 if __name__ == '__main__':
