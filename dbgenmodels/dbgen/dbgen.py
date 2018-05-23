@@ -352,6 +352,49 @@ class IGMGen:
 
         logging.info("Nr of transactions in {}: {}, Nr. of items: {}".format(args.dbfile, len(self.db), len(items)))
 
+    @print_timing
+    def learn(self, minsup):
+        self.modelfname = "models/igmmodel_minsup{}".format(minsup)
+        if os.path.exists(self.modelfname):
+            self.load()
+        else:
+            logging.info("running IGM inference; minsup = {}".format(minsup))
+
+            fi = self.getFI(minsup)  # get the frequent itemsets
+            self.igmModel = self.filterFi(fi)
+
+            with open(self.modelfname, 'w') as modelFile:
+                for (itemset, p) in self.igmModel:
+                    modelFile.write(",".join(itemset) + "\n")
+                    modelFile.write(str(p) + "\n")
+            logging.info("wrote IGM model file to {}".format(self.modelfname))
+
+        return len(self.igmModel)
+
+    @print_timing
+    def gen(self):
+        with open(self.newdbfile, 'w') as genFile:
+            ntrans = 0
+            for i in range(len(self.db)):
+                newtrans = []
+                j = self.chooseFreqItemset()
+                p = self.choosePattern(j)
+                n = self.chooseNoise(j)
+                newtrans = p | n   # both parameteres should be sets.
+                newitems = ",".join(sorted(newtrans))
+                logging.debug("===> generating transaction nr: {}; freq. itemset selected: {}; pattern selected: {}; noise pattern selected: {}".format(i, j, p, n))
+                if len(newtrans):
+                    genFile.write(newitems + "\n")
+                    logging.debug("writing transaction to new db: {}".format(newitems))
+                    ntrans += 1
+                # REPORT progress
+                if i and i % 1000 == 0:
+                    logging.info("\tprocessed {} transactions of {} ({:0.1f}%).".format(i, len(self.db), 100.0 * i / len(self.db)))
+
+        logging.info("wrote synthetic database to file {}, with {} transactions ({:0.1f}%)".format(self.newdbfile, ntrans, 100.0 * ntrans / len(self.db)))
+        return self.newdbfile
+
+
     def load(self):
         self.igm = []
         with open(self.modelfname) as inf:
@@ -372,7 +415,6 @@ class IGMGen:
 
 
     def save(self):
-        """ saves state to model file """
         with open(self.modelfname, 'w') as outf:
             for (itemset, p) in self.igm:
                 outf.write(",".join(itemset) + "\n")
@@ -405,52 +447,20 @@ class IGMGen:
         logging.info("loaded frequent itemsets from file {}".format(outfname))
         return fi
 
-    @print_timing
-    def learn(self, minsup):
-        self.modelfname = "models/igmmodel_minsup{}".format(minsup)
-        if os.path.exists(self.modelfname):
-            self.load()
-        else:
-            logging.info("running IGM inference; minsup = {}".format(minsup))
-
-        fi = self.getFI(minsup) # get the frequent itemsets
-        self.igmModel = self.filterFi(fi)
-
-        with open(self.modelfname, 'w') as modelFile:
-            for (itemset, p) in self.igmModel:
-                modelFile.write(",".join(itemset) + "\n")
-                modelFile.write(str(p) + "\n")
-        logging.info("wrote IGM model file to {}".format(self.modelfname))
-
-        return len(self.igmModel)
-
     def chooseFreqItemset(self):
+        # remember to return a list or set
         for j, x in enumerate(np.random.multinomial(1, [p for (itemset, p) in self.igmModel])):
             if x:
                 return j
 
-    @print_timing
-    def gen(self):
-        with open(self.newdbfile, 'w') as genFile:
-            ntrans = 0
-            for i in range(len(self.db)):
-                newtrans = []
-                j = self.chooseFreqItemset()
-                p = self.choosePattern()
-                n = self.chooseNoise()
-                newtrans = p | n
-                newitems = ",".join(sorted(newtrans))
-                logging.debug("===> generating transaction nr: {}; freq. itemset selected: {}; pattern selected: {}; noise pattern selected: {}".format(i, j ,p, n))
-                if len(newtrans):
-                    genFile.write(newitems + "\n")
-                    logging.debug("writing transaction to new db: {}".format(newitems))
-                    ntrans += 1
-                # REPORT progress
-                if i and i % 1000 == 0:
-                    logging.info("\tprocessed {} transactions of {} ({:0.1f}%).".format(i, len(self.db), 100.0*i/len(self.db)))
+    def choosePattern(self, pattern):
+        # remember to return a list or set
+        return 0
 
-        logging.info("wrote synthetic database to file {}, with {} transactions ({:0.1f}%)".format(self.newdbfile, ntrans, 100.0 * ntrans / len(self.db)))
-        return self.newdbfile
+    def chooseNoise(self, pattern):
+        # remember to return a list or set
+        return 0
+
 
 if __name__ == '__main__':
 
@@ -479,21 +489,22 @@ if __name__ == '__main__':
     K = eclat(args.dbfile)
     logging.info("Nr of frequent itemsets found is: '{}' (future K for lda generator)".format(K))
 
-
-    # now, run first generator model (lda) and then eclat on synthetic db
-    lda = LDALearnGen(args.dbfile)
-    lda.learn(K, args.lda_passes)
-    lda.gen()
-    eclat(lda.newdbfile)
-
-    # run iim generator model (iim)
-    iim = IIMLearnGen(args.dbfile)
-    iim.learn(args.iim_passes)
-    iim.gen()
-    eclat(iim.newdbfile)
-
     # IGM generator model (igm)
     igm = IGMGen(args.dbfile)
     igm.learn(args.minsup)
     igm.gen()
     eclat(igm.newdbfile)
+
+    # now, run first generator model (lda) and then eclat on synthetic db
+    # lda = LDALearnGen(args.dbfile)
+    # lda.learn(K, args.lda_passes)
+    # lda.gen()
+    # eclat(lda.newdbfile)
+    #
+    # # run iim generator model (iim)
+    # iim = IIMLearnGen(args.dbfile)
+    # iim.learn(args.iim_passes)
+    # iim.gen()
+    # eclat(iim.newdbfile)
+
+
