@@ -339,7 +339,7 @@ class IGMGen:
         self.modelfname = None     # to be determined on learn execution, depends on parameters
         self.K = None
         self.npasses = None
-        self.igmModel = None             # model parameters
+        self.igm = None             # model parameters
         self.dictionary = None      # link between item descriptions and ids
         # parse input file, figure out various statistics from dbfile
         self.db = []
@@ -361,15 +361,15 @@ class IGMGen:
             logging.info("running IGM inference; minsup = {}".format(minsup))
 
             fi = self.getFI(minsup)  # get the frequent itemsets
-            self.igmModel = self.filterFi(fi)
+            self.igm = self.filterFi(fi)
 
             with open(self.modelfname, 'w') as modelFile:
-                for (itemset, p) in self.igmModel:
+                for (itemset, p) in self.igm:
                     modelFile.write(",".join(itemset) + "\n")
                     modelFile.write(str(p) + "\n")
             logging.info("wrote IGM model file to {}".format(self.modelfname))
 
-        return len(self.igmModel)
+        return len(self.igm)
 
     @print_timing
     def gen(self):
@@ -398,15 +398,6 @@ class IGMGen:
     def load(self):
         self.igm = []
         with open(self.modelfname) as inf:
-            # template of the model file:
-            #   skin_care
-            #   0.00356
-            #   nuts / prunes
-            #   0.00336
-            #   tidbits
-            #   0.00234
-            #   bottled_beer, liquor, red / blush_wine
-            #   0.00193
             for line in inf:
                 itemset = line.strip().split(",")
                 prob = float(inf.readline().strip())
@@ -449,7 +440,7 @@ class IGMGen:
 
     def chooseFreqItemset(self):
         # remember to return a list or set
-        for j, x in enumerate(np.random.multinomial(1, [p for (itemset, p) in self.igmModel])):
+        for j, x in enumerate(np.random.multinomial(1, [p for (itemset, p) in self.igm])):
             if x:
                 return j
 
