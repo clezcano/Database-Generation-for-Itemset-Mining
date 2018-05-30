@@ -334,22 +334,21 @@ class IGMGen:
     """
 
     def __init__(self, indb):
-        self.dbfile = indb
-        self.newdbfile = "db/igm-" + os.path.basename(indb)
-        self.modelfname = None     # to be determined on learn execution, depends on parameters
-        self.K = None
-        self.npasses = None
-        self.igm = None             # model parameters
+        self.dbfile = indb # Original DB file name
+        self.newdbfile = "db/igm-" + os.path.basename(indb) # Newly generated DB file name.
+        self.modelfname = None     # to be determined on learn execution, depends on parameters. Same as igm class variable but this one is saved in file.
+        # self.K = None
+        # self.npasses = None
+        self.igm = None             # model parameters [(itemset, prob),...]
         self.dictionary = None      # link between item descriptions and ids
         # parse input file, figure out various statistics from dbfile
-        self.db = []
-        items = set()
+        self.db = [] # this saves the original DB.
+        items = set() # This is used to know the number of different items in original DB.
         with open(args.dbfile) as infile:
             for row in infile:
                 transaction = [item.strip().replace(" ", "_") for item in row.strip().split(',')]
                 items |= set(transaction)
                 self.db.append(sorted(transaction))
-
         logging.info("Nr of transactions in {}: {}, Nr. of items: {}".format(args.dbfile, len(self.db), len(items)))
 
     @print_timing
