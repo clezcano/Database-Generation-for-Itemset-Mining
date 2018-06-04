@@ -407,8 +407,8 @@ class IGMGen:
         # remember to return a list or set
         freq = [p for (itemset, p) in self.igmModel]
         sumFreq = sum(freq)
-        (itemset, p) = self.igmModel[list(np.random.multinomial(1, [p / sumFreq for p in freq])).index(1)]
-        return itemset
+        chosenIndex = list(np.random.multinomial(1, [p / sumFreq for p in freq])).index(1)
+        return chosenIndex
 
     def choosePattern(self, pattern):
         # remember to return a list or set
@@ -424,10 +424,10 @@ class IGMGen:
             ntrans = 0
             for i in range(len(self.originalDB)):
                 newTransaction = []
-                freqItemset = self.chooseItemset()
-                pattern = self.choosePattern(freqItemset)
+                chosenIndex = self.chooseItemset()
+                pattern = self.choosePattern(chosenIndex)
                 noise = self.chooseNoise(pattern)
-                newTransaction = pattern | noise   # both parameteres should be sets.
+                newTransaction = pattern.union(noise)   # both parameteres should be sets.
                 newTrans = ",".join(sorted(newTransaction))
                 logging.debug("===> generating transaction nr: {}; freq. itemset selected: {}; pattern selected: {}; noise pattern selected: {}".format(i, freqItemset, pattern, noise))
                 if len(newTrans):
