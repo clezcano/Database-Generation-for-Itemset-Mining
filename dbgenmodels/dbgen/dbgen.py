@@ -446,7 +446,7 @@ class IGMGen:
                 itemsetIndex = self.chooseItemset()
                 pattern = self.choosePattern(itemsetIndex)
                 noise = self.chooseNoise(pattern)
-                newTransaction = set(pattern).union(set(noise))   # both parameteres should be sets.
+                newTransaction = set(pattern).union(set(noise))   # both parameters should be sets.
                 newTrans = ",".join(sorted(newTransaction))
                 (itemset, p) = self.igmModel[itemsetIndex]
                 logging.debug("===> generating transaction nr: {}; freq. itemset selected: {}; pattern selected: {}; noise pattern selected: {}".format(i, itemset, pattern, noise))
