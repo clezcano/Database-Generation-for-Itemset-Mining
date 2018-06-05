@@ -26,7 +26,6 @@ from subprocess import call
 import re, os
 import gensim
 from gensim import corpora
-import fileinput
 import time
 import tempfile
 from itertools import combinations
@@ -332,7 +331,6 @@ class IGMGen:
     """
 
     def __init__(self, indb):
-
         self.originalDBfile = indb # Original DB file name
         self.originalDB = []  # this one saves the original DB.         # parse input file, figure out various statistics from dbfile
         self.modelFileName = None     # to be determined on learn execution, depends on parameters. Same as igm class variable but this one is saved in file.
