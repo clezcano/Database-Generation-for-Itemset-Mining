@@ -29,6 +29,7 @@ from gensim import corpora
 import fileinput
 import time
 import tempfile
+from itertools import combinations
 
 __author__ = 'marias'
 
@@ -337,13 +338,13 @@ class IGMGen:
         self.modelFileName = None     # to be determined on learn execution, depends on parameters. Same as igm class variable but this one is saved in file.
         self.igmModel = None             # model parameters [(itemset, prob),...]
         self.GeneratedDBfile = "db/igm-" + os.path.basename(indb)  # Newly generated DB file name.
-        items = set() # This is used to know the number of different items in original DB.
+        self.items = set() # This is used to know the number of different items in original DB.
         with open(args.originalDBfile) as infile:
             for row in infile:
                 transaction = [item.strip().replace(" ", "_") for item in row.strip().split(',')]
-                items |= set(transaction)
+                self.items |= set(transaction)
                 self.originalDB.append(sorted(transaction))
-            logging.info("Nr of transactions in {}: {}, Nr. of items: {}".format(args.originalDBfile, len(self.originalDB), len(items)))
+            logging.info("Nr of transactions in {}: {}, Nr. of items: {}".format(args.originalDBfile, len(self.originalDB), len(self.items)))
 
     def loadIgmModelFromFile(self):
         self.igmModel = []
@@ -403,20 +404,38 @@ class IGMGen:
             self.saveIgmModeltoFile()
         return len(self.igmModel)
 
-    def chooseFI(self):
+    def chooseItemset(self):
         # remember to return a list or set
         freq = [p for (itemset, p) in self.igmModel]
         sumFreq = sum(freq)
-        chosenIndex = list(np.random.multinomial(1, [p / sumFreq for p in freq])).index(1)
-        return chosenIndex
+        itemsetIndex = list(np.random.multinomial(1, [p / sumFreq for p in freq])).index(1)
+        return itemsetIndex
 
-    def choosePattern(self, pattern):
-        # remember to return a list or set
-        return 0
+    def choosePattern(self, patternIndex):
+        (itemset, p) = self.igmModel[patternIndex]
+        subsets = []
+        for i in range(1, len(itemset)):
+            subsets.extend([list(comb) for comb in combinations(itemset, i)])
+        uniformProb = (1 - (p / 100)) / (2 ** len(itemset) - 1)
+        freqList = [p] + [100 * uniformProb] * len(subsets)
+        sumfreq = sum(freqList)
+        subsets = [itemset] + subsets
+        patternIndex = list(np.random.multinomial(1, [freq / sumfreq for freq in freqList])).index(1)
+        # remember to return a set
+        return subsets[patternIndex]
 
     def chooseNoise(self, pattern):
+        noise = list(self.items.difference(set(pattern)))
+        subsets = []
+        for i in range(1, len(noise)):
+            subsets.extend([list(comb) for comb in combinations(noise, i)])
+        uniformProb = 1 / (2 ** (len(self.items) - len(pattern)))
+        subsets = [noise] + subsets
+        freqList = [100 * uniformProb] * len(subsets)
+        sumfreq = sum(freqList)
+        noiseIndex = list(np.random.multinomial(1, [freq / sumfreq for freq in freqList])).index(1)
         # remember to return a list or set
-        return 0
+        return subsets[noiseIndex]
 
     @print_timing
     def gen(self):
@@ -424,12 +443,13 @@ class IGMGen:
             ntrans = 0
             for i in range(len(self.originalDB)):
                 newTransaction = []
-                chosenIndex = self.chooseItemset()
-                pattern = self.choosePattern(chosenIndex)
+                itemsetIndex = self.chooseItemset()
+                pattern = self.choosePattern(itemsetIndex)
                 noise = self.chooseNoise(pattern)
-                newTransaction = pattern.union(noise)   # both parameteres should be sets.
+                newTransaction = set(pattern).union(set(noise))   # both parameteres should be sets.
                 newTrans = ",".join(sorted(newTransaction))
-                logging.debug("===> generating transaction nr: {}; freq. itemset selected: {}; pattern selected: {}; noise pattern selected: {}".format(i, freqItemset, pattern, noise))
+                (itemset, p) = self.igmModel[itemsetIndex]
+                logging.debug("===> generating transaction nr: {}; freq. itemset selected: {}; pattern selected: {}; noise pattern selected: {}".format(i, itemset, pattern, noise))
                 if len(newTrans):
                     genFile.write(newTrans + "\n")
                     logging.debug("writing transaction to new db: {}".format(newTrans))
