@@ -458,6 +458,63 @@ class IGMGen:
             logging.info("wrote synthetic database to file {}, with {} transactions ({:0.1f}%)".format(self.GeneratedDBfile, ntrans, 100.0 * ntrans / len(self.originalDB)))
         return len(self.GeneratedDBfile)
 
+
+class KrimpGen:
+    """
+       This DB Generator (IGM) is based on the model described in the paper
+       "Connection between mining frequent itemsets and learning generative models" by Laxman et.al.
+    """
+
+    def __init__(self, indb):
+        self.originalDBfile = indb # Original DB file name
+        self.originalDB = []  # this one saves the original DB.         # parse input file, figure out various statistics from dbfile
+        self.categoricalDB = []  # input DB formatted as a categorical DB.
+        self.modelFileName = None     # to be determined on learn execution, depends on parameters. Same as igm class variable but this one is saved in file.
+        self.krimpModel = None             # model parameters [(itemset, prob),...]
+        self.GeneratedDBfile = "db/krimp-" + os.path.basename(indb)  # Newly generated DB file name.
+        self.items = set() # This is used to know the number of different items in original DB.
+        self.itemAlphabet = [] # Original DB alphabet
+        self.itemToDomain = dict() # map an item to its domain.
+        self.domainToItem = dict()  # map any element of a domain to its item.
+        with open(args.originalDBfile) as infile:
+            for row in infile:
+                transaction = [item.strip().replace(" ", "_") for item in row.strip().split(',')] # [bottled_water cling_film/bags cream_cheese tropical_fruit]
+                self.items |= set(transaction)
+                self.originalDB.append(sorted(transaction))
+            logging.info("Nr of transactions in {}: {}, Nr. of items: {}".format(args.originalDBfile, len(self.originalDB), len(self.items)))
+        self.mapToCategoricalDB()
+        self.toCategoricalDB()
+
+    def mapToCategoricalDB(self):
+        self.itemAlphabet = list(self.items)
+        counter = 0
+        for item in self.itemAlphabet:
+            self.itemToDomain[item] = [counter, counter + 1]  #  [exist, not exist] or [purchased item, not purchased item]
+            self.domainToItem[counter] = item
+            self.domainToItem[counter + 1] = item
+            counter = counter + 2
+
+    def toCategoricalDB(self):
+        auxTrans =  [self.itemToDomain[item][1] for item in self.itemAlphabet] # This line empties the array by assigning each element the "not exist" value
+        for origTrans in self.originalDB:
+            catTrans = auxTrans[:]
+            for item in origTrans:
+                catTrans[catTrans.index(self.itemToDomain[item][1])] = self.itemToDomain[item][0]
+            self.categoricalDB.append(catTrans)
+
+    @print_timing
+    def learn(self, minsup):
+        self.modelFileName = "models/igmmodel_minsup{}".format(minsup)
+        if os.path.exists(self.modelFileName):
+            self.loadIgmModelFromFile()
+        else:
+            logging.info("running IGM inference; minsup = {}".format(minsup))
+            fi = self.getFI(minsup)  # get the frequent itemsets of the original DB. (e.g. using eclat) Format: [(itemset, prob),...]
+            self.igmModel = self.filterFI(fi) # Select the set of interesting itemsets following the concept proposed by Laxman et.al.
+            self.saveIgmModeltoFile()
+        return len(self.igmModel)
+
+
 if __name__ == '__main__':
 
     # arguments setup
@@ -468,6 +525,7 @@ if __name__ == '__main__':
     parser.add_argument('--lda_passes', default=200, help='Nr of passes over input data for lda parameter estimation')
     parser.add_argument('--iim_passes', default=500, help='Nr of iterations over input data for iim parameter estimation')
     parser.add_argument('--igm_minsup', default=75, help='Minimum support threshold (percentage %)')
+    parser.add_argument('--krimp_minsup', default=75, help='Minimum support threshold (percentage %)')
 
     args = parser.parse_args()
     args.dbname = os.path.basename(args.dbfile)
@@ -491,6 +549,13 @@ if __name__ == '__main__':
     igm.learn(args.igm_minsup)
     igm.gen()
     eclat(igm.GeneratedDBfile)
+
+    # Krimp generator model (krimp)
+    # REMEMBER TO CONSIDER ECLAT INPUT DB DELIMITER
+    krimp = KrimpGen(args.dbfile)
+    krimp.learn(args.krimp_minsup)
+    krimp.gen()
+    eclat(krimp.GeneratedDBfile)
 
     # now, run first generator model (lda) and then eclat on synthetic db
     # lda = LDALearnGen(args.dbfile)
