@@ -446,7 +446,7 @@ class IGMGen:
                 noise = self.chooseNoise(pattern)
                 newTransaction = set(pattern).union(set(noise))   # both parameters should be sets.
                 newTrans = ",".join(sorted(newTransaction))
-                (itemset, p) = self.igmModel[itemsetIndex]
+                # (itemset, p) = self.igmModel[itemsetIndex]
                 logging.debug("===> generating transaction nr: {}; freq. itemset selected: {}; pattern selected: {}; noise pattern selected: {}".format(i, itemset, pattern, noise))
                 if len(newTrans):
                     genFile.write(newTrans + "\n")
@@ -470,7 +470,7 @@ class KrimpGen:
         self.originalDB = []  # this one saves the original DB.         # parse input file, figure out various statistics from dbfile
         self.categoricalDB = []  # input DB formatted as a categorical DB.
         self.modelFileName = None     # to be determined on learn execution, depends on parameters. Same as igm class variable but this one is saved in file.
-        self.krimpModel = None             # model parameters [(itemset, prob),...]
+        self.krimpModel = None        # Krimp Code Table (CT)     # model  [(itemset, frequency),...] # frequency is over the cover and not over the original DB
         self.GeneratedDBfile = "db/krimp-" + os.path.basename(indb)  # Newly generated DB file name.
         self.items = set() # This is used to know the number of different items in original DB.
         self.itemAlphabet = [] # Original DB alphabet
@@ -514,6 +514,30 @@ class KrimpGen:
             self.saveIgmModeltoFile()
         return len(self.igmModel)
 
+    @print_timing
+    def gen(self):
+        with open(self.GeneratedDBfile, 'w') as genFile:
+            ntrans = 0
+            for i in range(len(self.originalDB)):
+                newTransaction = []
+                domainCounter = 0
+                while domainCounter < len(self.itemAlphabet): # each alphabet item represents a domain.
+                    dom = self.chooseDomain()
+                    itemset = self.chooseItemset(dom)
+                    newTransaction = set(pattern).union(itemset)  # both parameters should be sets.
+
+
+                newTrans = ",".join(sorted(newTransaction))
+                logging.debug("===> generating transaction nr: {}; freq. itemset selected: {}; pattern selected: {}; noise pattern selected: {}".format(i, itemset, pattern, noise))
+                if len(newTrans):
+                    genFile.write(newTrans + "\n")
+                    logging.debug("writing transaction to new db: {}".format(newTrans))
+                    ntrans += 1
+                # REPORT progress
+                if i and i % 1000 == 0:
+                    logging.info("\tprocessed {} transactions of {} ({:0.1f}%).".format(i, len(self.originalDB),100.0 * i / len(self.originalDB)))
+            logging.info("wrote synthetic database to file {}, with {} transactions ({:0.1f}%)".format(self.GeneratedDBfile, ntrans, 100.0 * ntrans / len(self.originalDB)))
+        return len(self.GeneratedDBfile)
 
 if __name__ == '__main__':
 
