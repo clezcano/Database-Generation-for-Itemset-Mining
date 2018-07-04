@@ -191,12 +191,12 @@ class IIMLearnGen:
         with open(self.newdbfile, 'w') as outf:
             ntrans = 0
             for i in range(self.m):
-                newtrans = []
+                newtrans = set()
                 for (items, p) in self.iims:
                     # bernoulli trial
                     if np.random.binomial(1, p):
                         logging.debug("===> adding iim {} to current transaction {}".format(items, i))
-                        newtrans += items
+                        newtrans |= set(items)
                 newitems = ",".join(sorted(newtrans))
                 if len(newtrans):
                     outf.write(newitems + "\n")
