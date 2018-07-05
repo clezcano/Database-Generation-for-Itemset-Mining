@@ -514,21 +514,29 @@ class KrimpGen:
             self.saveIgmModeltoFile()
         return len(self.igmModel)
 
+    def chooseDomain(self, domains):
+        freq = [p for (itemset, p) in list(domains)]
+        sumFreq = sum(freq)
+        itemsetIndex = list(np.random.multinomial(1, [p / sumFreq for p in freq])).index(1)
+        return itemsetIndex
+
+    def chooseItemset(self, domain):
+        pass
+
     @print_timing
     def gen(self):
         with open(self.GeneratedDBfile, 'w') as genFile:
             ntrans = 0
             for i in range(len(self.originalDB)):
                 newTransaction = []
-                domainCounter = 0
-                while domainCounter < len(self.itemAlphabet): # each alphabet item represents a domain.
-                    dom = self.chooseDomain()
+                domains = self.items.copy()
+                while domains: # each alphabet item represents a domain.
+                    dom = self.chooseDomain(domains)
                     itemset = self.chooseItemset(dom)
-                    newTransaction = set(pattern).union(itemset)  # both parameters should be sets.
-
-
+                    newTransaction += itemset
+                    domains -= set(itemset)
                 newTrans = ",".join(sorted(newTransaction))
-                logging.debug("===> generating transaction nr: {}; freq. itemset selected: {}; pattern selected: {}; noise pattern selected: {}".format(i, itemset, pattern, noise))
+                logging.debug("===> generating transaction nr: {}; generated transaction: {}".format(i, newTrans))
                 if len(newTrans):
                     genFile.write(newTrans + "\n")
                     logging.debug("writing transaction to new db: {}".format(newTrans))
