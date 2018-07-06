@@ -504,25 +504,44 @@ class KrimpGen:
         else:
             logging.info("running IGM inference; minsup = {}".format(minsup))
             fi = self.getFI(minsup)  # get the frequent itemsets of the original DB. (e.g. using eclat) Format: [(itemset, prob),...]
-            self.igmModel = self.filterFI(fi) # Select the set of interesting itemsets following the concept proposed by Laxman et.al.
+            self.krimpModel = self.filterFI(fi) # Select the set of interesting itemsets following the concept proposed by Laxman et.al.
             self.saveIgmModeltoFile()
         return len(self.igmModel)
 
-    def chooseItemset(self, domain):
+    def chooseItemset(self, CT_availableIndexes, domain):
+        auxCT = []
+        availableCT = [self.krimpModel[i] for i in CT_availableIndexes]
+        for (itemset, frequency) in availableCT:
+            if domain in set(itemset):
+                auxCT.append((itemset, frequency))
+        itemsets = [itemset for (itemset, p) in auxCT]
+        freq = [p for (itemset, p) in auxCT]
+        sumFreq = sum(freq)
+        return np.random.choice(itemsets, [p / sumFreq for p in freq])
+
+    def removeCTelements(self, CT_availableIndexes, chosenItemset):
+        auxCT = []
+        availableCT = [self.krimpModel[i] for i in CT_availableIndexes]
+        for (itemset, frequency) in availableCT:
+            if chosenItemset not in set(itemset):
+                auxCT.append(itemset, frequency)
         return 0
 
     @print_timing
     def gen(self):
         with open(self.GeneratedDBfile, 'w') as genFile:
             ntrans = 0
+            CTindex = []
             for i in range(len(self.originalDB)):
                 newTransaction = []
                 domains = self.items.copy()  # each alphabet's item represents a domain.
+                CT_availableIndexes = range(len(self.krimpModel))
                 while domains:
                     chosenDomain = np.random.choice(list(domains))
-                    itemset = self.chooseItemset(chosenDomain)
+                    itemset = self.chooseItemset(CT_availableIndexes, chosenDomain)
                     newTransaction += itemset  # must be an union of disjoint itemsets.
                     domains -= set(itemset)
+                    CT_availableIndexes = self.removeCTelements(CT_availableIndexes, itemset)
                 newTrans = ",".join(sorted(newTransaction))
                 logging.debug("===> generating transaction nr: {}; generated transaction: {}".format(i, newTrans))
                 if len(newTrans):
