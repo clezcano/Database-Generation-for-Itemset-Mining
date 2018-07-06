@@ -403,11 +403,9 @@ class IGMGen:
         return len(self.igmModel)
 
     def chooseItemset(self):
-        # remember to return a list or set
         freq = [p for (itemset, p) in self.igmModel]
         sumFreq = sum(freq)
-        itemsetIndex = list(np.random.multinomial(1, [p / sumFreq for p in freq])).index(1)
-        return itemsetIndex
+        return np.random.choice(len(freq), [p / sumFreq for p in freq])
 
     def choosePattern(self, patternIndex):
         (itemset, p) = self.igmModel[patternIndex]
@@ -418,9 +416,7 @@ class IGMGen:
         freqList = [p] + [100 * uniformProb] * len(subsets)
         sumfreq = sum(freqList)
         subsets = [itemset] + subsets
-        patternIndex = list(np.random.multinomial(1, [freq / sumfreq for freq in freqList])).index(1)
-        # remember to return a set
-        return subsets[patternIndex]
+        return np.random.choice(subsets, [freq / sumfreq for freq in freqList])
 
     def chooseNoise(self, pattern):
         noise = list(self.items.difference(set(pattern)))
@@ -431,9 +427,7 @@ class IGMGen:
         subsets = [noise] + subsets
         freqList = [100 * uniformProb] * len(subsets)
         sumfreq = sum(freqList)
-        noiseIndex = list(np.random.multinomial(1, [freq / sumfreq for freq in freqList])).index(1)
-        # remember to return a list or set
-        return subsets[noiseIndex]
+        return np.random.choice(subsets, [freq / sumfreq for freq in freqList])
 
     @print_timing
     def gen(self):
@@ -514,14 +508,8 @@ class KrimpGen:
             self.saveIgmModeltoFile()
         return len(self.igmModel)
 
-    def chooseDomain(self, domains):
-        freq = [p for (itemset, p) in list(domains)]
-        sumFreq = sum(freq)
-        itemsetIndex = list(np.random.multinomial(1, [p / sumFreq for p in freq])).index(1)
-        return itemsetIndex
-
     def chooseItemset(self, domain):
-        pass
+        return 0
 
     @print_timing
     def gen(self):
@@ -529,11 +517,11 @@ class KrimpGen:
             ntrans = 0
             for i in range(len(self.originalDB)):
                 newTransaction = []
-                domains = self.items.copy()
-                while domains: # each alphabet item represents a domain.
-                    dom = self.chooseDomain(domains)
-                    itemset = self.chooseItemset(dom)
-                    newTransaction += itemset
+                domains = self.items.copy()  # each alphabet's item represents a domain.
+                while domains:
+                    chosenDomain = np.random.choice(list(domains))
+                    itemset = self.chooseItemset(chosenDomain)
+                    newTransaction += itemset  # must be an union of disjoint itemsets.
                     domains -= set(itemset)
                 newTrans = ",".join(sorted(newTransaction))
                 logging.debug("===> generating transaction nr: {}; generated transaction: {}".format(i, newTrans))
