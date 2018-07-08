@@ -476,15 +476,15 @@ class KrimpGen:
                 self.items |= set(transaction)
                 self.originalDB.append(sorted(transaction))
             logging.info("Nr of transactions in {}: {}, Nr. of items: {}".format(args.originalDBfile, len(self.originalDB), len(self.items)))
-        self.mapToCategoricalDB()
+        self.mapToCategAlphabet()
         self.toCategoricalDB()
 
-    def mapToCategoricalDB(self):
+    def mapToCategAlphabet(self):
         self.itemAlphabet = list(self.items)
         counter = 0
         for item in self.itemAlphabet:
             self.itemToDomain[item] = [counter, counter + 1]  #  [exist, not exist] or [purchased item, not purchased item]
-            self.domainToItem[counter] = item
+            self.domainToItem[counter] = item     # even values = exist, odd values = not exist
             self.domainToItem[counter + 1] = item
             counter = counter + 2
 
@@ -508,41 +508,41 @@ class KrimpGen:
             self.saveIgmModeltoFile()
         return len(self.igmModel)
 
-    def chooseItemset(self, CT_availableIndexes, domain):
+    def chooseItemset(self, CTavailableIndexes, domain):
         auxCT = []
-        availableCT = [self.krimpModel[i] for i in CT_availableIndexes]
-        for (itemset, frequency) in availableCT:
-            if domain in set(itemset):
+        availableCT = [self.krimpModel[i] for i in CTavailableIndexes]
+        for (itemset, frequency) in availableCT:  # itemset is categorical
+            if set(self.itemToDomain[domain]).intersection(set(itemset)):
                 auxCT.append((itemset, frequency))
         itemsets = [itemset for (itemset, p) in auxCT]
         freq = [p for (itemset, p) in auxCT]
         sumFreq = sum(freq)
         return np.random.choice(itemsets, [p / sumFreq for p in freq])
 
-    def removeCTelements(self, CT_availableIndexes, chosenItemset):
-        auxCT = []
-        availableCT = [self.krimpModel[i] for i in CT_availableIndexes]
-        for (itemset, frequency) in availableCT:
-            if chosenItemset not in set(itemset):
-                auxCT.append(itemset, frequency)
-        return 0
+    def removeCTelements(self, CTavailableIndexes, itemset):
+        return [index for index in CTavailableIndexes if set(self.getDomains(self.krimpModel[index][0])).intersection(set(self.getDomains(itemset))) == set()]
+
+    def convertToItemsets(self, categItemset):  # categItemset is categorical which is converted to the normal itemset format.
+        return [self.domainToItem[value] for value in categItemset if value % 2 == 0]  # even values means the item exists
+
+    def getDomains(self, categItemset):  # categItemset is categorical
+        return [self.domainToItem[value] for value in categItemset]
 
     @print_timing
     def gen(self):
         with open(self.GeneratedDBfile, 'w') as genFile:
             ntrans = 0
-            CTindex = []
             for i in range(len(self.originalDB)):
-                newTransaction = []
-                domains = self.items.copy()  # each alphabet's item represents a domain.
-                CT_availableIndexes = range(len(self.krimpModel))
+                newTransaction = []  # newTransaction is categorical
+                domains = self.items.copy()  # each alphabet's item represents a domain.  # domains is not categorical
+                CTavailableIndexes = range(len(self.krimpModel))
                 while domains:
                     chosenDomain = np.random.choice(list(domains))
-                    itemset = self.chooseItemset(CT_availableIndexes, chosenDomain)
+                    itemset = self.chooseItemset(CTavailableIndexes, chosenDomain)  # itemset is categorical
                     newTransaction += itemset  # must be an union of disjoint itemsets.
-                    domains -= set(itemset)
-                    CT_availableIndexes = self.removeCTelements(CT_availableIndexes, itemset)
-                newTrans = ",".join(sorted(newTransaction))
+                    domains -= set(self.getDomains(itemset))
+                    CTavailableIndexes = self.removeCTelements(CTavailableIndexes, itemset)
+                newTrans = ",".join(sorted(self.convertToItemsets(newTransaction)))
                 logging.debug("===> generating transaction nr: {}; generated transaction: {}".format(i, newTrans))
                 if len(newTrans):
                     genFile.write(newTrans + "\n")
