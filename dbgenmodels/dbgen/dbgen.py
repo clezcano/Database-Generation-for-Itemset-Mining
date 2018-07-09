@@ -466,9 +466,9 @@ class KrimpGen:
         self.modelFileName = None     # to be determined on learn execution, depends on parameters. Same as igm class variable but this one is saved in file.
         self.krimpModel = None        # Krimp Code Table (CT)     # model  [(itemset, frequency),...] # frequency is over the cover and not over the original DB
         self.GeneratedDBfile = "db/krimp-" + os.path.basename(indb)  # Newly generated DB file name.
-        self.items = set() # This is used to know the number of different items in original DB.
-        self.itemAlphabet = [] # Original DB alphabet
-        self.itemToDomain = dict() # map an item to its domain.
+        self.items = set()  # This is used to know the number of different items in original DB.
+        self.itemAlphabet = []  # Original DB alphabet
+        self.itemToDomain = dict()  # map an item to its domain.
         self.domainToItem = dict()  # map any element of a domain to its item.
         with open(args.originalDBfile) as infile:
             for row in infile:
@@ -483,30 +483,46 @@ class KrimpGen:
         self.itemAlphabet = list(self.items)
         counter = 0
         for item in self.itemAlphabet:
-            self.itemToDomain[item] = [counter, counter + 1]  #  [exist, not exist] or [purchased item, not purchased item]
+            self.itemToDomain[item] = [counter, counter + 1]  # [exist, not exist] or [purchased item, not purchased item]
             self.domainToItem[counter] = item     # even values = exist, odd values = not exist
             self.domainToItem[counter + 1] = item
             counter = counter + 2
 
-    def toCategoricalDB(self):
-        auxTrans =  [self.itemToDomain[item][1] for item in self.itemAlphabet] # This line empties the array by assigning each element the "not exist" value
+    def toCategoricalDB(self):  # convert the item database into a categorical one.
+        auxTrans = [self.itemToDomain[item][1] for item in self.itemAlphabet]  # This line empties the array by assigning each element the "not exist" value
         for origTrans in self.originalDB:
             catTrans = auxTrans[:]
             for item in origTrans:
                 catTrans[catTrans.index(self.itemToDomain[item][1])] = self.itemToDomain[item][0]
             self.categoricalDB.append(catTrans)
 
+    def loadKrimpModelFromFile(self):
+        self.krimpModel = []
+        with open(self.modelFileName) as inf:
+            for line in inf:
+                itemset = line.strip().split(",")
+                prob = float(inf.readline().strip())
+                self.krimpModel.append((itemset, prob))
+            logging.info("Krimp model loaded from file {}".format(self.modelFileName))
+
+    def saveKrimpModeltoFile(self):
+        with open(self.modelFileName, 'w') as modelFile:
+            for (itemset, p) in self.krimpModel:
+                modelFile.write(",".join(itemset) + "\n")
+                modelFile.write(str(p) + "\n")
+            logging.info("wrote Krimp model file to {}".format(self.modelFileName))
+
     @print_timing
     def learn(self, minsup):
-        self.modelFileName = "models/igmmodel_minsup{}".format(minsup)
+        self.modelFileName = "models/krimpmodel_minsup{}".format(minsup)
         if os.path.exists(self.modelFileName):
-            self.loadIgmModelFromFile()
+            self.loadKrimpModelFromFile()
         else:
             logging.info("running IGM inference; minsup = {}".format(minsup))
             fi = self.getFI(minsup)  # get the frequent itemsets of the original DB. (e.g. using eclat) Format: [(itemset, prob),...]
             self.krimpModel = self.filterFI(fi) # Select the set of interesting itemsets following the concept proposed by Laxman et.al.
-            self.saveIgmModeltoFile()
-        return len(self.igmModel)
+            self.saveKrimpModeltoFile()
+        return len(self.krimpModel)
 
     def chooseItemset(self, CTavailableIndexes, domain):
         auxCT = []
