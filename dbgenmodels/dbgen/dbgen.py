@@ -460,7 +460,8 @@ class KrimpGen:
     """
 
     def __init__(self, indb):
-        self.originalDBfile = indb # Original DB file name
+        # Item data -> Categorical data -> Krimp format -> Categorical data -> Item data.
+        self.originalDBfile = indb  # Original DB file name
         self.originalDB = []  # this one saves the original DB.         # parse input file, figure out various statistics from dbfile
         self.categoricalDB = []  # input DB formatted as a categorical DB.
         self.modelFileName = None     # to be determined on learn execution, depends on parameters. Same as igm class variable but this one is saved in file.
@@ -513,7 +514,7 @@ class KrimpGen:
             logging.info("wrote Krimp model file to {}".format(self.modelFileName))
 
     @print_timing
-    def learn(self, minsup):
+    def learn(self, minsup):  # Categorical data -> Krimp format -> Categorical data.
         self.modelFileName = "models/krimpmodel_minsup{}".format(minsup)
         if os.path.exists(self.modelFileName):
             self.loadKrimpModelFromFile()
@@ -538,14 +539,14 @@ class KrimpGen:
     def removeCTelements(self, CTavailableIndexes, itemset):
         return [index for index in CTavailableIndexes if set(self.getDomains(self.krimpModel[index][0])).intersection(set(self.getDomains(itemset))) == set()]
 
-    def convertToItemsets(self, categItemset):  # categItemset is categorical which is converted to the normal itemset format.
+    def convertToItemsets(self, categItemset):  # categItemset is categorical which is converted to the normal itemset format. # Categorical data -> Item data
         return [self.domainToItem[value] for value in categItemset if value % 2 == 0]  # even values means the item exists
 
-    def getDomains(self, categItemset):  # categItemset is categorical
+    def getDomains(self, categItemset):  # categItemset is categorical # Categorical data -> Item data
         return [self.domainToItem[value] for value in categItemset]
 
     @print_timing
-    def gen(self):
+    def gen(self):  # Categorical data -> Item data
         with open(self.GeneratedDBfile, 'w') as genFile:
             ntrans = 0
             for i in range(len(self.originalDB)):
