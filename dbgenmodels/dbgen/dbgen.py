@@ -467,6 +467,7 @@ class KrimpGen:
         self.modelFileName = None     # to be determined on learn execution, depends on parameters. Same as igm class variable but this one is saved in file.
         self.krimpModel = None        # Krimp Code Table (CT)     # model  [(itemset, frequency),...] # frequency is over the cover and not over the original DB
         self.GeneratedDBfile = "db/krimp-" + os.path.basename(indb)  # Newly generated DB file name.
+        self.CategDBfile = "db/krimp-categ-" + os.path.basename(indb)  # Categorical DB file name which feed.
         self.items = set()  # This is used to know the number of different items in original DB.
         self.itemAlphabet = []  # Original DB alphabet
         self.itemToDomain = dict()  # map an item to its domain.
@@ -496,6 +497,13 @@ class KrimpGen:
             for item in origTrans:
                 catTrans[catTrans.index(self.itemToDomain[item][1])] = self.itemToDomain[item][0]
             self.categoricalDB.append(catTrans)
+        self.saveCategDBtoFile()
+
+    def saveCategDBtoFile(self):
+        with open(self.CategDBfile, 'w') as categFile:
+            for trans in self.categoricalDB:
+                categFile.write(",".join(trans) + "\n")
+            logging.info("wrote categorical DB file to {}".format(self.CategDBfile))
 
     def loadKrimpModelFromFile(self):
         self.krimpModel = []
@@ -515,13 +523,13 @@ class KrimpGen:
 
     @print_timing
     def learn(self, minsup):  # Categorical data -> Krimp format -> Categorical data.
-        self.modelFileName = "models/krimpmodel_minsup{}".format(minsup)
+        self.modelFileName = "models/krimp_minsup{}".format(minsup)
         if os.path.exists(self.modelFileName):
             self.loadKrimpModelFromFile()
         else:
             logging.info("running IGM inference; minsup = {}".format(minsup))
             fi = self.getFI(minsup)  # get the frequent itemsets of the original DB. (e.g. using eclat) Format: [(itemset, prob),...]
-            self.krimpModel = self.filterFI(fi) # Select the set of interesting itemsets following the concept proposed by Laxman et.al.
+            self.krimpModel = self.filterFI(fi)  # Select the set of interesting itemsets following the concept proposed by Laxman et.al.
             self.saveKrimpModeltoFile()
         return len(self.krimpModel)
 
@@ -607,7 +615,6 @@ if __name__ == '__main__':
     eclat(igm.GeneratedDBfile)
 
     # Krimp generator model (krimp)
-    # REMEMBER TO CONSIDER ECLAT INPUT DB DELIMITER
     krimp = KrimpGen(args.dbfile)
     krimp.learn(args.krimp_minsup)
     krimp.gen()
