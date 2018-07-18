@@ -454,11 +454,6 @@ class IGMGen:
 
 
 class KrimpGen:
-    """
-       This DB Generator (IGM) is based on the model described in the paper
-       "Connection between mining frequent itemsets and learning generative models" by Laxman et.al.
-    """
-
     def __init__(self, indb):
         # Item data -> Categorical data -> Krimp format -> Categorical data -> Item data.
         self.originalDBfile = indb  # Original DB file name
