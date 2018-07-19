@@ -28,6 +28,7 @@ import gensim
 from gensim import corpora
 import time
 import tempfile
+import fileinput
 from itertools import combinations
 
 __author__ = 'marias'
@@ -336,7 +337,7 @@ class IGMGen:
         self.modelFileName = None     # to be determined on learn execution, depends on parameters. Same as igm class variable but this one is saved in file.
         self.igmModel = None             # model parameters [(itemset, prob),...]
         self.GeneratedDBfile = "db/igm-" + os.path.basename(indb)  # Newly generated DB file name.
-        self.items = set() # This is used to know the number of different items in original DB.
+        self.items = set()  # This is used to know the number of different items in original DB.
         with open(args.originalDBfile) as infile:
             for row in infile:
                 transaction = [item.strip().replace(" ", "_") for item in row.strip().split(',')]
@@ -494,6 +495,41 @@ class KrimpGen:
             self.categoricalDB.append(catTrans)
         self.saveCategDBtoFile()
 
+    def datadirConf(self):  # set up file: datadir.conf
+        base = "C:/Users/SF/PycharmProjects/Database-Generation-for-Itemset-Mining/dbgenmodels/dbgen/"
+        for line in fileinput.input("../KrimpBinSource/bin/datadir.conf", inplace=1):
+            if "dataDir =" in line:
+                line = "dataDir = " + base + "KrimpBinSource/data/"
+            elif "expDir =" in line:
+                line = "expDir = " + base + "KrimpBinSource/xps/"
+            print(line.rstrip('\n'))
+
+    def convertdbConf(self):  # set up file: convertdb.conf
+        logging.info("convert categorical DB to Krimp DB; categorical DB name = {}.db".format(self.originalDBfile))
+        bname = os.path.splitext(os.path.basename(self.originalDBfile))[0]
+        for line in fileinput.input("../KrimpBinSource/bin/convertdb.conf", inplace=1):
+            if "dbName =" in line:
+                line = "dbName = " + bname
+            print(line.rstrip('\n'))
+        cmd = ["../KrimpBinSource/bin/krimp.exe", "convertdb.conf"]
+        call(cmd)
+        logging.info("categ. DB converted to krimp format in file: {}".format(bname + "db"))
+
+    def compressConf(self):
+        bname = os.path.splitext(os.path.basename(self.originalDBfile))[0]
+        for line in fileinput.input("../KrimpBinSource/bin/compress.conf", inplace=1):
+            if line.startswith("iscName ="):
+                line = "iscName = " + bname + "-" + args.krimp_type + "-" + args.krimp_minsup + "d"
+            elif line.startswith("dataType ="):
+                line = "dataType = bai32"
+            print(line.rstrip('\n'))
+        cmd = ["../KrimpBinSource/bin/krimp.exe", "compress.conf"]
+        call(cmd)
+        logging.info("running Krimp inference; minsup = {}".format(args.krimp_minsup))
+
+    def getKrimpModel(self):
+        return []
+
     def saveCategDBtoFile(self):
         with open(self.CategDBfile, 'w') as categFile:
             for trans in self.categoricalDB:
@@ -522,9 +558,10 @@ class KrimpGen:
         if os.path.exists(self.modelFileName):
             self.loadKrimpModelFromFile()
         else:
-            logging.info("running IGM inference; minsup = {}".format(minsup))
-            fi = self.getFI(minsup)  # get the frequent itemsets of the original DB. (e.g. using eclat) Format: [(itemset, prob),...]
-            self.krimpModel = self.filterFI(fi)  # Select the set of interesting itemsets following the concept proposed by Laxman et.al.
+            self.datadirConf()
+            self.convertdbConf()
+            self.compressConf()
+            self.krimpModel = self.getKrimpModel()  # Select the set of interesting itemsets following the concept proposed by Laxman et.al.
             self.saveKrimpModeltoFile()
         return len(self.krimpModel)
 
@@ -579,12 +616,13 @@ if __name__ == '__main__':
     # arguments setup
     parser = argparse.ArgumentParser()
     parser.add_argument('--logfile', default=None, help='Log file')
-    parser.add_argument('--dbfile', default='db/groceries.csv', help='Input database')
+    parser.add_argument('--dbfile', default='db/groceries.csv', help='Input database (only format accepted .dat)')
     parser.add_argument('--minsup', default=75, help='Minimum support threshold')
     parser.add_argument('--lda_passes', default=200, help='Nr of passes over input data for lda parameter estimation')
     parser.add_argument('--iim_passes', default=500, help='Nr of iterations over input data for iim parameter estimation')
     parser.add_argument('--igm_minsup', default=75, help='Minimum support threshold (percentage %)')
-    parser.add_argument('--krimp_minsup', default=75, help='Minimum support threshold (percentage %)')
+    parser.add_argument('--krimp_minsup', default=0.75, help='<integer>--Absolute minsup (e.g. 10, 42, 512), <float>-- Relative minsup (e.g. 0.1 would be 10% of database size)')
+    parser.add_argument('--krimp_type', default=all, help='Candidate type determined by [ all | cls | closed ]')
 
     args = parser.parse_args()
     args.dbname = os.path.basename(args.dbfile)
