@@ -145,7 +145,6 @@ class IIMLearnGen:
                 self.iims.append((itemset, prob))
         logging.info("loaded IIM model from file {}".format(self.modelfname))
 
-
     def save(self):
         """ saves state to model file """
         with open(self.modelfname, 'w') as outf:
@@ -527,16 +526,26 @@ class KrimpGen:
         call(cmd)
         logging.info("running Krimp inference; minsup = {}".format(args.krimp_minsup))
 
-    def getKrimpModel(self):
-        return []
-
     def saveCategDBtoFile(self):
         with open(self.CategDBfile, 'w') as categFile:
             for trans in self.categoricalDB:
                 categFile.write(",".join(trans) + "\n")
             logging.info("wrote categorical DB file to {}".format(self.CategDBfile))
 
-    def loadKrimpModelFromFile(self):
+    def getKrimpModel(self):
+        # syntax is:  '0 1 2 3 4 5 6 7 9 11 (2573,2573)'
+        self.krimpModel = []
+        pattern = re.compile(r'(.+)(\s+)\((.+)\)')
+        with open(args.krimp_CTfilename) as inf:
+            for line in inf.readlines()[2:]:
+                m = re.match(pattern, line)
+                if m:
+                    itemset = sorted([int(item) for item in m.group(1).strip().split(" ")])
+                    prob = int(list(m.group(3).strip().split(","))[0])
+                    self.krimpModel.append((itemset, prob))
+            logging.info("Krimp model loaded from file {}".format(self.modelFileName))
+
+      def loadKrimpModelFromFile(self):
         self.krimpModel = []
         with open(self.modelFileName) as inf:
             for line in inf:
@@ -558,12 +567,15 @@ class KrimpGen:
         if os.path.exists(self.modelFileName):
             self.loadKrimpModelFromFile()
         else:
-            self.datadirConf()
-            self.convertdbConf()
-            self.compressConf()
-            self.krimpModel = self.getKrimpModel()  # Select the set of interesting itemsets following the concept proposed by Laxman et.al.
+            self.getKrimpModel()  # Select the set of interesting itemsets following the concept proposed by Laxman et.al.
             self.saveKrimpModeltoFile()
         return len(self.krimpModel)
+
+    @print_timing
+    def getCT(self, minsup):  # Categorical data -> Krimp format -> Categorical data.
+        self.datadirConf()
+        self.convertdbConf()
+        self.compressConf()
 
     def chooseItemset(self, CTavailableIndexes, domain):
         auxCT = []
@@ -621,8 +633,9 @@ if __name__ == '__main__':
     parser.add_argument('--lda_passes', default=200, help='Nr of passes over input data for lda parameter estimation')
     parser.add_argument('--iim_passes', default=500, help='Nr of iterations over input data for iim parameter estimation')
     parser.add_argument('--igm_minsup', default=75, help='Minimum support threshold (percentage %)')
-    parser.add_argument('--krimp_minsup', default=0.75, help='<integer>--Absolute minsup (e.g. 10, 42, 512), <float>-- Relative minsup (e.g. 0.1 would be 10% of database size)')
+    parser.add_argument('--krimp_minsup', default=None, help='<integer>--Absolute minsup (e.g. 10, 42, 512), <float>-- Relative minsup (e.g. 0.1 would be 10% of database size)')
     parser.add_argument('--krimp_type', default=all, help='Candidate type determined by [ all | cls | closed ]')
+    parser.add_argument('--krimp_CTfilename', default=None, help='CT name file')
 
     args = parser.parse_args()
     args.dbname = os.path.basename(args.dbfile)
@@ -649,6 +662,7 @@ if __name__ == '__main__':
 
     # Krimp generator model (krimp)
     krimp = KrimpGen(args.dbfile)
+    krimp.getCT()
     krimp.learn(args.krimp_minsup)
     krimp.gen()
     eclat(krimp.GeneratedDBfile)
