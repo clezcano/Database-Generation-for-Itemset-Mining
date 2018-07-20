@@ -545,7 +545,7 @@ class KrimpGen:
                     self.krimpModel.append((itemset, prob))
             logging.info("Krimp model loaded from file {}".format(self.modelFileName))
 
-      def loadKrimpModelFromFile(self):
+    def loadKrimpModelFromFile(self):
         self.krimpModel = []
         with open(self.modelFileName) as inf:
             for line in inf:
@@ -661,11 +661,11 @@ if __name__ == '__main__':
     eclat(igm.GeneratedDBfile)
 
     # Krimp generator model (krimp)
-    krimp = KrimpGen(args.dbfile)
-    krimp.getCT()
-    krimp.learn(args.krimp_minsup)
-    krimp.gen()
-    eclat(krimp.GeneratedDBfile)
+    # krimp = KrimpGen(args.dbfile)
+    # krimp.getCT()
+    # krimp.learn(args.krimp_minsup)
+    # krimp.gen()
+    # eclat(krimp.GeneratedDBfile)
 
     # now, run first generator model (lda) and then eclat on synthetic db
     # lda = LDALearnGen(args.dbfile)
