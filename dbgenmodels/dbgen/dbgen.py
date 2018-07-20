@@ -100,6 +100,7 @@ def eclat(infname):
 
     return nfreqitemsets
 
+# --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 class IIMLearnGen:
     """
@@ -210,6 +211,7 @@ class IIMLearnGen:
 
         return self.newdbfile
 
+# --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 class LDALearnGen:
     """
@@ -324,6 +326,8 @@ class LDALearnGen:
 
         return self.newdbfile
 
+# --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 class IGMGen:
     """
        This DB Generator (IGM) is based on the model described in the paper
@@ -331,24 +335,25 @@ class IGMGen:
     """
 
     def __init__(self, indb):
-        self.originalDBfile = indb # Original DB file name
-        self.originalDB = []  # this one saves the original DB.         # parse input file, figure out various statistics from dbfile
-        self.modelFileName = None     # to be determined on learn execution, depends on parameters. Same as igm class variable but this one is saved in file.
-        self.igmModel = None             # model parameters [(itemset, prob),...]
-        self.GeneratedDBfile = "db/igm-" + os.path.basename(indb)  # Newly generated DB file name.
-        self.items = set()  # This is used to know the number of different items in original DB.
-        with open(args.originalDBfile) as infile:
+        self.origDBfileName = indb
+        self.origDBfilePath = os.path.join(os.getcwd(), "dbgenmodels", "dbgen", "db", indb)  # Original DB file name e.g. chess.dat
+        self.GenDBfilePath = os.path.join(os.getcwd(), "dbgenmodels", "dbgen", "out", "igmOut-" + indb)  # Newly generated DB file name.
+        self.modelFileName = None  # to be determined on learn execution, depends on parameters. Same as igm class variable but this one is saved in file.
+        self.originalDB = []  #  this one saves the original DB.         #  parse input file, figure out various statistics from dbfile
+        self.igmModel = None  # model parameters [(itemset, prob),...]
+        self.itemAlphabet = set()  # This is used to know the number of different items in original DB. It saves the item's alphabet.
+        with open(self.origDBfilePath) as infile:
             for row in infile:
-                transaction = [item.strip().replace(" ", "_") for item in row.strip().split(',')]
-                self.items |= set(transaction)
+                transaction = [item.strip() for item in row.strip().split(" ")]  # transaction = [item.strip().replace(" ", "_") for item in row.strip().split(',')]
+                self.itemAlphabet |= set(transaction)
                 self.originalDB.append(sorted(transaction))
-            logging.info("Nr of transactions in {}: {}, Nr. of items: {}".format(args.originalDBfile, len(self.originalDB), len(self.items)))
+            logging.info("Nr of transactions in {}: {}, Nr. of items: {}".format(self.origDBfileName, len(self.originalDB), len(self.itemAlphabet)))
 
     def loadIgmModelFromFile(self):
         self.igmModel = []
         with open(self.modelFileName) as inf:
             for line in inf:
-                itemset = line.strip().split(",")
+                itemset = line.strip().split(" ")
                 prob = float(inf.readline().strip())
                 self.igmModel.append((itemset, prob))
             logging.info("IGM model loaded from file {}".format(self.modelFileName))
@@ -364,10 +369,11 @@ class IGMGen:
     def getFI(self, minsup):
         """ runs eclat on input db. Prints the frequent itemsets on a file and returns them as well
             Input DB format: other vegetables,whole milk (7.48348)  Obs: Ensure not to use the nr of transaction but the ratio """
-        bname = os.path.splitext(os.path.basename(self.originalDBfile))[0]
-        outfname = "out/eclat-igm-{}.itemsets".format(bname)
-        cmd = ["exe/eclat", "-f,", "-s{}".format(minsup), "-k,", self.originalDBfile, outfname]
-        logging.info("running eclat command: {} over the original file".format(" ".join(cmd), self.originalDBfile))
+        bname = os.path.splitext(os.path.basename(self.origDBfilePath))[0]  # returns groceries from groceries.dat
+        outfname = os.path.join(os.getcwd(), "dbgenmodels", "dbgen", "out", "eclat-igm-{}{}.itemsets".format(minsup, bname))
+        eclatPath = os.path.join(os.getcwd(), "dbgenmodels", "dbgen", "exe", "eclat.exe")
+        cmd = [eclatPath, '-f" "', "-s{}".format(minsup), "-k,", self.origDBfilePath, outfname]
+        logging.info("running eclat command: {} over the original file : {}".format(" ".join(cmd), self.origDBfileName))
         call(cmd)
         logging.info("wrote frequent itemsets in file {}".format(outfname))
         fi = []
@@ -376,7 +382,7 @@ class IGMGen:
                 if len(line):
                     m = re.match(r'(.+)\(([\d\.]+)\)', line)
                     if m:
-                        itemset = [item.strip().replace(" ", "_") for item in m.group(1).strip().split(',')]
+                        itemset = [item.strip() for item in m.group(1).strip().split(',')]
                         freq = float(m.group(2).strip())
                         fi.append((itemset, freq))
             logging.info("frequent itemsets loaded from file {}".format(outfname))
@@ -384,7 +390,7 @@ class IGMGen:
 
     def filterFI(self, fi):
         interestingFI = []
-        for (itemset, frequency) in fi:
+        for (itemset, frequency) in fi:   # fi = [ ([2,5,8,3], 74), ... ]
             threshold = 100 * (1 / (2 ** len(itemset)))
             if frequency > threshold:
                 interestingFI.append((itemset, frequency))
@@ -392,13 +398,13 @@ class IGMGen:
 
     @print_timing
     def learn(self, minsup):
-        self.modelFileName = "models/igmmodel_minsup{}".format(minsup)
+        self.modelFileName = os.path.join(os.getcwd(), "dbgenmodels", "dbgen", "models", "igm{}{}".format(args.igm_minsup, self.origDBfileName))
         if os.path.exists(self.modelFileName):
             self.loadIgmModelFromFile()
         else:
-            logging.info("running IGM inference; minsup = {}".format(minsup))
-            fi = self.getFI(minsup)  # get the frequent itemsets of the original DB. (e.g. using eclat) Format: [(itemset, prob),...]
-            self.igmModel = self.filterFI(fi) # Select the set of interesting itemsets following the concept proposed by Laxman et.al.
+            logging.info("running IGM inference; minsup = {} on file: {}".format(args.igm_minsup, self.origDBfileName))
+            fi = self.getFI(args.igm_minsup)  # get the frequent itemsets of the original DB. (e.g. using eclat) Format: [(itemset, prob),...]
+            self.igmModel = self.filterFI(fi)  # Select the set of interesting itemsets following the concept proposed by Laxman et.al.
             self.saveIgmModeltoFile()
         return len(self.igmModel)
 
@@ -419,11 +425,11 @@ class IGMGen:
         return np.random.choice(subsets, [freq / sumfreq for freq in freqList])
 
     def chooseNoise(self, pattern):
-        noise = list(self.items.difference(set(pattern)))
+        noise = list(self.itemAlphabet.difference(set(pattern)))
         subsets = []
         for i in range(1, len(noise)):
             subsets.extend([list(comb) for comb in combinations(noise, i)])
-        uniformProb = 1 / (2 ** (len(self.items) - len(pattern)))
+        uniformProb = 1 / (2 ** (len(self.itemAlphabet) - len(pattern)))
         subsets = [noise] + subsets
         freqList = [100 * uniformProb] * len(subsets)
         sumfreq = sum(freqList)
@@ -431,7 +437,7 @@ class IGMGen:
 
     @print_timing
     def gen(self):
-        with open(self.GeneratedDBfile, 'w') as genFile:
+        with open(self.GenDBfilePath, 'w') as genFile:
             ntrans = 0
             for i in range(len(self.originalDB)):
                 newTransaction = []
@@ -440,7 +446,7 @@ class IGMGen:
                 noise = self.chooseNoise(pattern)
                 newTransaction = set(pattern).union(set(noise))   # both parameters should be sets.
                 newTrans = ",".join(sorted(newTransaction))
-                # (itemset, p) = self.igmModel[itemsetIndex]
+                (itemset, p) = self.igmModel[itemsetIndex]
                 logging.debug("===> generating transaction nr: {}; freq. itemset selected: {}; pattern selected: {}; noise pattern selected: {}".format(i, itemset, pattern, noise))
                 if len(newTrans):
                     genFile.write(newTrans + "\n")
@@ -449,9 +455,10 @@ class IGMGen:
                 # REPORT progress
                 if i and i % 1000 == 0:
                     logging.info("\tprocessed {} transactions of {} ({:0.1f}%).".format(i, len(self.originalDB), 100.0 * i / len(self.originalDB)))
-            logging.info("wrote synthetic database to file {}, with {} transactions ({:0.1f}%)".format(self.GeneratedDBfile, ntrans, 100.0 * ntrans / len(self.originalDB)))
-        return len(self.GeneratedDBfile)
+            logging.info("wrote synthetic database to file {}, with {} transactions ({:0.1f}%)".format(self.GenDBfilePath, ntrans, 100.0 * ntrans / len(self.originalDB)))
+        return len(self.GenDBfilePath)
 
+# --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 class KrimpGen:
     def __init__(self, indb):
@@ -628,18 +635,17 @@ if __name__ == '__main__':
     # arguments setup
     parser = argparse.ArgumentParser()
     parser.add_argument('--logfile', default=None, help='Log file')
-    parser.add_argument('--dbfile', default='db/groceries.csv', help='Input database (only format accepted .dat)')
-    parser.add_argument('--minsup', default=75, help='Minimum support threshold')
+    parser.add_argument('--dbfile', default='chess.dat', help='Input database (only format accepted .dat)')
+    # parser.add_argument('--minsup', default=75, help='Minimum support threshold')
     parser.add_argument('--lda_passes', default=200, help='Nr of passes over input data for lda parameter estimation')
     parser.add_argument('--iim_passes', default=500, help='Nr of iterations over input data for iim parameter estimation')
-    parser.add_argument('--igm_minsup', default=75, help='Minimum support threshold (percentage %)')
+    parser.add_argument('--igm_minsup', default=75, help='positive: percentage of transactions, negative: exact number of transactions e.g. 50 or -50')
     parser.add_argument('--krimp_minsup', default=None, help='<integer>--Absolute minsup (e.g. 10, 42, 512), <float>-- Relative minsup (e.g. 0.1 would be 10% of database size)')
     parser.add_argument('--krimp_type', default=all, help='Candidate type determined by [ all | cls | closed ]')
     parser.add_argument('--krimp_CTfilename', default=None, help='CT name file')
 
     args = parser.parse_args()
     args.dbname = os.path.basename(args.dbfile)
-
     # logging setup
     if args.logfile:
         logging.basicConfig(filename=args.logfile, format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
@@ -650,15 +656,15 @@ if __name__ == '__main__':
     np.random.seed(43)
 
     # first, run eclat on original file to do comparisons
-    K = eclat(args.dbfile)
-    logging.info("Nr of frequent itemsets found is: '{}' (future K for lda generator)".format(K))
+    # K = eclat(args.dbfile)
+    # logging.info("Nr of frequent itemsets found is: '{}' (future K for lda generator)".format(K))
 
     # IGM generator model (igm)
     # REMEMBER TO CONSIDER ECLAT INPUT DB DELIMITER
     igm = IGMGen(args.dbfile)
     igm.learn(args.igm_minsup)
     igm.gen()
-    eclat(igm.GeneratedDBfile)
+    eclat(igm.GenDBfilePath)
 
     # Krimp generator model (krimp)
     # krimp = KrimpGen(args.dbfile)
