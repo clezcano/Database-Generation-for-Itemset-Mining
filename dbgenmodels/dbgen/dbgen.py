@@ -396,6 +396,34 @@ class IGMGen:
                 interestingFI.append((itemset, frequency))
         return interestingFI
 
+    def chooseItemset(self):
+        freq = [p for (itemset, p) in self.igmModel]
+        sumFreq = sum(freq)
+        return np.random.choice(len(freq), [p / sumFreq for p in freq])
+
+    def choosePattern(self, itemsetIndex):
+        (itemset, p) = self.igmModel[itemsetIndex]
+        subsets = []
+        for i in range(1, len(itemset)):
+            subsets.extend([list(comb) for comb in combinations(itemset, i)])
+        uniformProb = (1 - (p / 100)) / (2 ** len(itemset) - 1)
+        freqList = [p] + [100 * uniformProb] * len(subsets)
+        sumfreq = sum(freqList)
+        subsets = [itemset] + subsets
+        return np.random.choice(subsets, [freq / sumfreq for freq in freqList])
+
+    def chooseNoise(self, itemsetIndex):
+        (itemset, p) = self.igmModel[itemsetIndex]
+        noise = list(self.itemAlphabet.difference(set(itemset)))
+        subsets = []
+        for i in range(1, len(noise)):
+            subsets.extend([list(comb) for comb in combinations(noise, i)])
+        uniformProb = 1 / (2 ** (len(self.itemAlphabet) - len(itemset)))
+        subsets = [noise] + subsets
+        freqList = [100 * uniformProb] * len(subsets)
+        sumfreq = sum(freqList)
+        return np.random.choice(subsets, [freq / sumfreq for freq in freqList])
+
     @print_timing
     def learn(self, minsup):
         self.modelFileName = os.path.join(os.getcwd(), "dbgenmodels", "dbgen", "models", "igm{}{}".format(args.igm_minsup, self.origDBfileName))
@@ -408,33 +436,6 @@ class IGMGen:
             self.saveIgmModeltoFile()
         return len(self.igmModel)
 
-    def chooseItemset(self):
-        freq = [p for (itemset, p) in self.igmModel]
-        sumFreq = sum(freq)
-        return np.random.choice(len(freq), [p / sumFreq for p in freq])
-
-    def choosePattern(self, patternIndex):
-        (itemset, p) = self.igmModel[patternIndex]
-        subsets = []
-        for i in range(1, len(itemset)):
-            subsets.extend([list(comb) for comb in combinations(itemset, i)])
-        uniformProb = (1 - (p / 100)) / (2 ** len(itemset) - 1)
-        freqList = [p] + [100 * uniformProb] * len(subsets)
-        sumfreq = sum(freqList)
-        subsets = [itemset] + subsets
-        return np.random.choice(subsets, [freq / sumfreq for freq in freqList])
-
-    def chooseNoise(self, pattern):
-        noise = list(self.itemAlphabet.difference(set(pattern)))
-        subsets = []
-        for i in range(1, len(noise)):
-            subsets.extend([list(comb) for comb in combinations(noise, i)])
-        uniformProb = 1 / (2 ** (len(self.itemAlphabet) - len(pattern)))
-        subsets = [noise] + subsets
-        freqList = [100 * uniformProb] * len(subsets)
-        sumfreq = sum(freqList)
-        return np.random.choice(subsets, [freq / sumfreq for freq in freqList])
-
     @print_timing
     def gen(self):
         with open(self.GenDBfilePath, 'w') as genFile:
@@ -443,9 +444,9 @@ class IGMGen:
                 newTransaction = []
                 itemsetIndex = self.chooseItemset()
                 pattern = self.choosePattern(itemsetIndex)
-                noise = self.chooseNoise(pattern)
+                noise = self.chooseNoise(itemsetIndex)
                 newTransaction = set(pattern).union(set(noise))   # both parameters should be sets.
-                newTrans = ",".join(sorted(newTransaction))
+                newTrans = " ".join(sorted(list(newTransaction)))
                 (itemset, p) = self.igmModel[itemsetIndex]
                 logging.debug("===> generating transaction nr: {}; freq. itemset selected: {}; pattern selected: {}; noise pattern selected: {}".format(i, itemset, pattern, noise))
                 if len(newTrans):
