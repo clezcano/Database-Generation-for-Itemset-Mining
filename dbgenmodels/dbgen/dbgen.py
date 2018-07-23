@@ -445,8 +445,8 @@ class IGMGen:
                 itemsetIndex = self.chooseItemset()
                 pattern = self.choosePattern(itemsetIndex)
                 noise = self.chooseNoise(itemsetIndex)
-                newTransaction = set(pattern).union(set(noise))   # both parameters should be sets.
-                newTrans = " ".join(sorted(list(newTransaction)))
+                newTransaction = pattern + noise   # both parameters should be sets.
+                newTrans = " ".join(sorted(newTransaction))
                 (itemset, p) = self.igmModel[itemsetIndex]
                 logging.debug("===> generating transaction nr: {}; freq. itemset selected: {}; pattern selected: {}; noise pattern selected: {}".format(i, itemset, pattern, noise))
                 if len(newTrans):
@@ -464,28 +464,29 @@ class IGMGen:
 class KrimpGen:
     def __init__(self, indb):
         # Item data -> Categorical data -> Krimp format -> Categorical data -> Item data.
-        self.originalDBfile = indb  # Original DB file name
+        self.origDBfileName = indb  # Original DB file name
+        self.origDBfilePath = os.path.join(os.getcwd(), "dbgenmodels", "dbgen", "db", indb)  # Original DB file name e.g. chess.dat
+        self.CategDBfileName = os.path.join(os.getcwd(), "dbgenmodels", "dbgen", "db", "krimp-categ-" + indb)  # Categorical DB file name which feed.
+        self.GenDBfilePath = os.path.join(os.getcwd(), "dbgenmodels", "dbgen", "out", "krimpOut-" + indb)  # Newly generated DB file name.
         self.originalDB = []  # this one saves the original DB.         # parse input file, figure out various statistics from dbfile
         self.categoricalDB = []  # input DB formatted as a categorical DB.
         self.modelFileName = None     # to be determined on learn execution, depends on parameters. Same as igm class variable but this one is saved in file.
         self.krimpModel = None        # Krimp Code Table (CT)     # model  [(itemset, frequency),...] # frequency is over the cover and not over the original DB
-        self.GeneratedDBfile = "db/krimp-" + os.path.basename(indb)  # Newly generated DB file name.
-        self.CategDBfile = "db/krimp-categ-" + os.path.basename(indb)  # Categorical DB file name which feed.
         self.items = set()  # This is used to know the number of different items in original DB.
         self.itemAlphabet = []  # Original DB alphabet
-        self.itemToDomain = dict()  # map an item to its domain.
         self.domainToItem = dict()  # map any element of a domain to its item.
-        with open(args.originalDBfile) as infile:
+        self.itemToDomain = dict()  # map an item to its domain.
+        with open(self.origDBfilePath) as infile:
             for row in infile:
-                transaction = [item.strip().replace(" ", "_") for item in row.strip().split(',')] # [bottled_water cling_film/bags cream_cheese tropical_fruit]
+                transaction = [item.strip() for item in row.strip().split(" ")]  # [bottled_water cling_film/bags cream_cheese tropical_fruit]
                 self.items |= set(transaction)
                 self.originalDB.append(sorted(transaction))
             logging.info("Nr of transactions in {}: {}, Nr. of items: {}".format(args.originalDBfile, len(self.originalDB), len(self.items)))
+        self.itemAlphabet = sorted(list(self.items))
         self.mapToCategAlphabet()
         self.toCategoricalDB()
 
     def mapToCategAlphabet(self):
-        self.itemAlphabet = list(self.items)
         counter = 0
         for item in self.itemAlphabet:
             self.itemToDomain[item] = [counter, counter + 1]  # [exist, not exist] or [purchased item, not purchased item]
@@ -512,8 +513,8 @@ class KrimpGen:
             print(line.rstrip('\n'))
 
     def convertdbConf(self):  # set up file: convertdb.conf
-        logging.info("convert categorical DB to Krimp DB; categorical DB name = {}.db".format(self.originalDBfile))
-        bname = os.path.splitext(os.path.basename(self.originalDBfile))[0]
+        logging.info("convert categorical DB to Krimp DB; categorical DB name = {}.db".format(self.origDBfileName))
+        bname = os.path.splitext(os.path.basename(self.origDBfileName))[0]
         for line in fileinput.input("../KrimpBinSource/bin/convertdb.conf", inplace=1):
             if "dbName =" in line:
                 line = "dbName = " + bname
@@ -523,7 +524,7 @@ class KrimpGen:
         logging.info("categ. DB converted to krimp format in file: {}".format(bname + "db"))
 
     def compressConf(self):
-        bname = os.path.splitext(os.path.basename(self.originalDBfile))[0]
+        bname = os.path.splitext(os.path.basename(self.origDBfileName))[0]
         for line in fileinput.input("../KrimpBinSource/bin/compress.conf", inplace=1):
             if line.startswith("iscName ="):
                 line = "iscName = " + bname + "-" + args.krimp_type + "-" + args.krimp_minsup + "d"
@@ -535,10 +536,10 @@ class KrimpGen:
         logging.info("running Krimp inference; minsup = {}".format(args.krimp_minsup))
 
     def saveCategDBtoFile(self):
-        with open(self.CategDBfile, 'w') as categFile:
+        with open(self.CategDBfileName, 'w') as categFile:
             for trans in self.categoricalDB:
                 categFile.write(",".join(trans) + "\n")
-            logging.info("wrote categorical DB file to {}".format(self.CategDBfile))
+            logging.info("wrote categorical DB file to {}".format(self.CategDBfileName))
 
     def getKrimpModel(self):
         # syntax is:  '0 1 2 3 4 5 6 7 9 11 (2573,2573)'
@@ -607,7 +608,7 @@ class KrimpGen:
 
     @print_timing
     def gen(self):  # Categorical data -> Item data
-        with open(self.GeneratedDBfile, 'w') as genFile:
+        with open(self.GenDBfileName, 'w') as genFile:
             ntrans = 0
             for i in range(len(self.originalDB)):
                 newTransaction = []  # newTransaction is categorical
@@ -628,8 +629,8 @@ class KrimpGen:
                 # REPORT progress
                 if i and i % 1000 == 0:
                     logging.info("\tprocessed {} transactions of {} ({:0.1f}%).".format(i, len(self.originalDB),100.0 * i / len(self.originalDB)))
-            logging.info("wrote synthetic database to file {}, with {} transactions ({:0.1f}%)".format(self.GeneratedDBfile, ntrans, 100.0 * ntrans / len(self.originalDB)))
-        return len(self.GeneratedDBfile)
+            logging.info("wrote synthetic database to file {}, with {} transactions ({:0.1f}%)".format(self.GenDBfileName, ntrans, 100.0 * ntrans / len(self.originalDB)))
+        return len(self.GenDBfileName)
 
 if __name__ == '__main__':
 
@@ -662,17 +663,17 @@ if __name__ == '__main__':
 
     # IGM generator model (igm)
     # REMEMBER TO CONSIDER ECLAT INPUT DB DELIMITER
-    igm = IGMGen(args.dbfile)
-    igm.learn(args.igm_minsup)
-    igm.gen()
-    eclat(igm.GenDBfilePath)
+    # igm = IGMGen(args.dbfile)
+    # igm.learn(args.igm_minsup)
+    # igm.gen()
+    # eclat(igm.GenDBfilePath)
 
     # Krimp generator model (krimp)
-    # krimp = KrimpGen(args.dbfile)
-    # krimp.getCT()
-    # krimp.learn(args.krimp_minsup)
-    # krimp.gen()
-    # eclat(krimp.GeneratedDBfile)
+    krimp = KrimpGen(args.dbfile)
+    krimp.getCT()
+    krimp.learn(args.krimp_minsup)
+    krimp.gen()
+    eclat(krimp.GenDBfileName)
 
     # now, run first generator model (lda) and then eclat on synthetic db
     # lda = LDALearnGen(args.dbfile)
