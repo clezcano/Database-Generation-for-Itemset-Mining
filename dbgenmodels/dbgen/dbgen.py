@@ -476,6 +476,8 @@ class KrimpGen:
         self.itemAlphabet = []  # Original DB alphabet
         self.itemToDomain = dict()  # map an item to its domain.
         self.domainToItem = dict()  # map any element of a domain to its item.
+        self.categToKrimp = dict()  # map categorical format to krimp's
+        self.krimpToCateg = dict()  # map krimp's format to categorical format.
         with open(self.origDBfilePath) as infile:
             for row in infile:
                 transaction = [item.strip() for item in row.strip().split(" ")]  # [bottled_water cling_film/bags cream_cheese tropical_fruit]
@@ -513,14 +515,15 @@ class KrimpGen:
     def getCT(self):  # Categorical data -> Krimp format -> Categorical data.
         self.datadirConf()
         self.convertdbConf()
+        self.toKrimpFormat()
         self.compressConf()
 
     def datadirConf(self):  # file setup: datadir.conf
         for line in fileinput.input(os.path.join(os.getcwd(), "dbgenmodels", "dbgen", "KrimpBinSource", "bin", "datadir.conf"), inplace=1):
             if "dataDir =" in line:
-                line = "dataDir = " + os.path.join(os.getcwd(), "dbgenmodels", "dbgen", "KrimpBinSource", "data").replace('\\','/') + '/'
+                line = "dataDir = " + os.path.join(os.getcwd(), "dbgenmodels", "dbgen", "KrimpBinSource", "data").replace('\\', '/') + '/'
             elif "expDir =" in line:
-                line = "expDir = " + os.path.join(os.getcwd(), "dbgenmodels", "dbgen", "KrimpBinSource", "xps").replace('\\','/') + '/'
+                line = "expDir = " + os.path.join(os.getcwd(), "dbgenmodels", "dbgen", "KrimpBinSource", "xps").replace('\\', '/') + '/'
             print(line.rstrip('\n'))
 
     def convertdbConf(self):  # set up file: convertdb.conf
@@ -533,6 +536,15 @@ class KrimpGen:
         cmd = [os.path.join(os.getcwd(), "dbgenmodels", "dbgen", "KrimpBinSource", "bin", "krimp.exe"), "convertdb.conf"]
         call(cmd)
         logging.info("categ. DB converted to krimp format in file: {}".format(bname + ".db"))
+
+    def toKrimpFormat(self):
+        krimpfileName = os.path.splitext(os.path.basename(self.CategDBfilePath))[0] + "db"
+        with open(self.modelFileName) as inf:
+            for line in inf:
+                if line.startswith("iscName ="):
+                    line = "iscName = " + bname + "-" + args.krimp_type + "-" + args.krimp_minsup + "d"
+                elif line.startswith("dataType ="):
+                    line = "dataType = bai32"
 
     def compressConf(self):
         bname = os.path.splitext(os.path.basename(self.CategDBfilePath))[0]
@@ -548,43 +560,44 @@ class KrimpGen:
         logging.info("Krimp inference; minsup = {}".format(args.krimp_minsup))
 
     @print_timing
-    def learn(self, minsup):  # Categorical data -> Krimp format -> Categorical data.
-        self.modelFileName = "models/krimp_minsup{}".format(minsup)
+    def learn(self, minsup):
+        self.modelFileName = os.path.join(os.getcwd(), "dbgenmodels", "dbgen", "models", "krimpmodel_{}".format(minsup))
         if os.path.exists(self.modelFileName):
             self.loadKrimpModelFromFile()
         else:
-            self.getKrimpModel()  # Select the set of interesting itemsets following the concept proposed by Laxman et.al.
+            self.getKrimpModel()
             self.saveKrimpModeltoFile()
         return len(self.krimpModel)
-
-    def getKrimpModel(self):
-        # syntax is:  '0 1 2 3 4 5 6 7 9 11 (2573,2573)'
-        self.krimpModel = []
-        pattern = re.compile(r'(.+)(\s+)\((.+)\)')
-        with open(args.krimp_CTfilename) as inf:
-            for line in inf.readlines()[2:]:
-                m = re.match(pattern, line)
-                if m:
-                    itemset = sorted([int(item) for item in m.group(1).strip().split(" ")])
-                    prob = int(list(m.group(3).strip().split(","))[0])
-                    self.krimpModel.append((itemset, prob))
-            logging.info("Krimp model loaded from file {}".format(self.modelFileName))
 
     def loadKrimpModelFromFile(self):
         self.krimpModel = []
         with open(self.modelFileName) as inf:
             for line in inf:
-                itemset = line.strip().split(",")
-                prob = float(inf.readline().strip())
+                itemset = [item.strip() for item in line.strip().split(" ")]
+                prob = int(inf.readline().strip())
                 self.krimpModel.append((itemset, prob))
             logging.info("Krimp model loaded from file {}".format(self.modelFileName))
 
     def saveKrimpModeltoFile(self):
         with open(self.modelFileName, 'w') as modelFile:
             for (itemset, p) in self.krimpModel:
-                modelFile.write(",".join(itemset) + "\n")
+                modelFile.write(" ".join(itemset) + "\n")
                 modelFile.write(str(p) + "\n")
             logging.info("wrote Krimp model file to {}".format(self.modelFileName))
+
+    def getKrimpModel(self):
+        # syntax is:  '0 1 2 3 4 5 6 7 9 11 (2573,2573)'
+        auxModelFileName = os.path.join(os.getcwd(), "dbgenmodels", "dbgen", "KrimpBinSource", "xps", "compress", args.krimp_CTfilename)
+        self.krimpModel = []
+        pattern = re.compile(r'(.+)(\s+)\((.+)\)')
+        with open(auxModelFileName) as inf:
+            for line in inf.readlines()[2:]:
+                m = re.match(pattern, line)
+                if m:
+                    itemset = sorted([int(item.strip()) for item in m.group(1).strip().split(" ")])
+                    prob = int(list(m.group(3).strip().split(","))[0])
+                    self.krimpModel.append((itemset, prob))
+            logging.info("Krimp model loaded from file {}".format(auxModelFileName))
 
     def chooseItemset(self, CTavailableIndexes, domain):
         auxCT = []
@@ -608,10 +621,10 @@ class KrimpGen:
 
     @print_timing
     def gen(self):  # Categorical data -> Item data
-        with open(self.GenDBfileName, 'w') as genFile:
+        with open(self.GenDBfilePath, 'w') as genFile:
             ntrans = 0
             for i in range(len(self.originalDB)):
-                newTransaction = []  # newTransaction is categorical
+                newTransaction = []
                 domains = self.items.copy()  # each alphabet's item represents a domain.  # domains is not categorical
                 CTavailableIndexes = range(len(self.krimpModel))
                 while domains:
@@ -628,9 +641,9 @@ class KrimpGen:
                     ntrans += 1
                 # REPORT progress
                 if i and i % 1000 == 0:
-                    logging.info("\tprocessed {} transactions of {} ({:0.1f}%).".format(i, len(self.originalDB),100.0 * i / len(self.originalDB)))
-            logging.info("wrote synthetic database to file {}, with {} transactions ({:0.1f}%)".format(self.GenDBfileName, ntrans, 100.0 * ntrans / len(self.originalDB)))
-        return len(self.GenDBfileName)
+                    logging.info("\tprocessed {} transactions of {} ({:0.1f}%).".format(i, len(self.originalDB), 100.0 * i / len(self.originalDB)))
+            logging.info("wrote synthetic database to file {}, with {} transactions ({:0.1f}%)".format(self.GenDBfilePath, ntrans, 100.0 * ntrans / len(self.originalDB)))
+        return len(self.GenDBfilePath)
 
 if __name__ == '__main__':
 
@@ -673,7 +686,7 @@ if __name__ == '__main__':
     krimp.getCT()
     krimp.learn(args.krimp_minsup)
     krimp.gen()
-    eclat(krimp.GenDBfileName)
+    eclat(krimp.GenDBfilePath)
 
     # now, run first generator model (lda) and then eclat on synthetic db
     # lda = LDALearnGen(args.dbfile)
