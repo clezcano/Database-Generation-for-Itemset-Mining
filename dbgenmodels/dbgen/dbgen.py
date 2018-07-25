@@ -480,7 +480,7 @@ class KrimpGen:
         self.krimpToCateg = dict()  # map krimp's format to categorical format.
         with open(self.origDBfilePath) as infile:
             for row in infile:
-                transaction = [item.strip() for item in row.strip().split(" ")]  # [bottled_water cling_film/bags cream_cheese tropical_fruit]
+                transaction = [int(item.strip()) for item in row.strip().split(" ")]  # [bottled_water cling_film/bags cream_cheese tropical_fruit]
                 self.items |= set(transaction)
                 self.originalDB.append(sorted(transaction))
             logging.info("Nr of transactions in {}: {}, Nr. of items: {}".format(args.originalDBfile, len(self.originalDB), len(self.items)))
@@ -538,13 +538,18 @@ class KrimpGen:
         logging.info("categ. DB converted to krimp format in file: {}".format(bname + ".db"))
 
     def toKrimpFormat(self):
-        krimpfileName = os.path.splitext(os.path.basename(self.CategDBfilePath))[0] + "db"
-        with open(self.modelFileName) as inf:
-            for line in inf:
-                if line.startswith("iscName ="):
-                    line = "iscName = " + bname + "-" + args.krimp_type + "-" + args.krimp_minsup + "d"
-                elif line.startswith("dataType ="):
-                    line = "dataType = bai32"
+        krimpfileBaseName = os.path.splitext(os.path.basename(self.CategDBfilePath))[0] + ".db"
+        krimpDBfileName = os.path.join(os.getcwd(), "dbgenmodels", "dbgen", "KrimpBinSource", "data", "dataset", krimpfileBaseName)
+        krimpFormat = []
+        categFormat = []
+        with open(krimpDBfileName) as inf:
+            for line in inf.readlines()[:7]:
+                if line.startswith("ab :"):  # krimp format
+                    krimpFormat = [int(item.strip()) for item in line.split(":")[1].strip().split(" ")]
+                elif line.startswith("it :"):  # categorical format
+                    categFormat = [int(item.strip()) for item in line.split(":")[1].strip().split(" ")]
+        self.krimpToCateg = dict(zip(krimpFormat, categFormat))  #  map krimp's format to categorical format.
+        self.categToKrimp = dict(zip(categFormat, krimpFormat))  #  map categorical format to krimp's
 
     def compressConf(self):
         bname = os.path.splitext(os.path.basename(self.CategDBfilePath))[0]
@@ -573,7 +578,7 @@ class KrimpGen:
         self.krimpModel = []
         with open(self.modelFileName) as inf:
             for line in inf:
-                itemset = [item.strip() for item in line.strip().split(" ")]
+                itemset = [int(item.strip()) for item in line.strip().split(" ")]
                 prob = int(inf.readline().strip())
                 self.krimpModel.append((itemset, prob))
             logging.info("Krimp model loaded from file {}".format(self.modelFileName))
@@ -603,21 +608,22 @@ class KrimpGen:
         auxCT = []
         availableCT = [self.krimpModel[i] for i in CTavailableIndexes]
         for (itemset, frequency) in availableCT:  # itemset is categorical
-            if set(self.itemToDomain[domain]).intersection(set(itemset)):
+            krimpFormatDom = {self.categToKrimp[self.itemToDomain[domain][0]], self.categToKrimp[self.itemToDomain[domain][1]]}
+            if krimpFormatDom.intersection(set(itemset)):
                 auxCT.append((itemset, frequency))
         itemsets = [itemset for (itemset, p) in auxCT]
         freq = [p for (itemset, p) in auxCT]
         sumFreq = sum(freq)
         return np.random.choice(itemsets, [p / sumFreq for p in freq])
 
+    def getDomains(self, itemset):  # itemset must be in Krimp format
+        return [self.domainToItem[self.krimpToCateg[item]] for item in itemset]
+
     def removeCTelements(self, CTavailableIndexes, itemset):
         return [index for index in CTavailableIndexes if set(self.getDomains(self.krimpModel[index][0])).intersection(set(self.getDomains(itemset))) == set()]
 
-    def convertToItemsets(self, categItemset):  # categItemset is categorical which is converted to the normal itemset format. # Categorical data -> Item data
-        return [self.domainToItem[value] for value in categItemset if value % 2 == 0]  # even values means the item exists
-
-    def getDomains(self, categItemset):  # categItemset is categorical # Categorical data -> Item data
-        return [self.domainToItem[value] for value in categItemset]
+    def convertToItemsets(self, krimpItemset):
+        return [self.domainToItem[i] for i in [self.krimpToCateg[item] for item in krimpItemset] if i % 2 == 0]  # even values means the item exists
 
     @print_timing
     def gen(self):  # Categorical data -> Item data
@@ -633,7 +639,7 @@ class KrimpGen:
                     newTransaction += itemset  # must be an union of disjoint itemsets.
                     domains -= set(self.getDomains(itemset))
                     CTavailableIndexes = self.removeCTelements(CTavailableIndexes, itemset)
-                newTrans = ",".join(sorted(self.convertToItemsets(newTransaction)))
+                newTrans = " ".join(sorted(self.convertToItemsets(newTransaction)))
                 logging.debug("===> generating transaction nr: {}; generated transaction: {}".format(i, newTrans))
                 if len(newTrans):
                     genFile.write(newTrans + "\n")
