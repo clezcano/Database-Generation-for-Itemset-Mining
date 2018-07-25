@@ -1,29 +1,23 @@
 """
 .. module:: dbgen
-
 dbgen
 ******
-
 :Description: dbgen
-
     input is a transactional database;
     generates various synthetic dbs based on statistical properties of input db
     using various probabilistic approaches
-
 :Authors:
     marias@cs.upc.edu
-
 :Version: 0.1
-
 :Date:  17/11/2017
 """
-
 from __future__ import print_function, division
 import argparse
 import numpy as np
 import logging
 from subprocess import call
-import re, os
+import re
+import os
 import gensim
 from gensim import corpora
 import time
@@ -32,7 +26,6 @@ import fileinput
 from itertools import combinations
 
 __author__ = 'marias'
-
 
 def parse_iim_output(fname, dictionary):
     # syntax is:  '{2, 13}	prob: 0,17160 	int: 1,00000'
@@ -48,7 +41,6 @@ def parse_iim_output(fname, dictionary):
                 prob_str = m.group(3).strip().replace(",", ".")
                 iims.append((itemset, float(prob_str)))
                 logging.debug("adding interesting itemset {}".format((itemset, prob_str)))
-
     return iims
 
 def print_timing(func):
@@ -70,14 +62,14 @@ def head(fname, nlines=5):
     inf.close()
 
 @print_timing
-def eclat(infname):
+def eclat(infname, minsup):
     """
     runs eclat on input db
     returns nr of frequent itemsets found and save them on file.
     """
     bname = os.path.splitext(os.path.basename(infname))[0]
-    outfname = "out/eclat-{}.itemsets".format(bname)
-    cmd = ["exe/eclat", "-f,", "-s{}".format(args.minsup), "-k,", "-Z", infname, outfname] # -Z prints number of items per size
+    outfname = os.path.join(os.getcwd(), "dbgenmodels", "dbgen", "out", "eclat-{}.itemsets".format(bname))
+    cmd = [os.path.join(os.getcwd(), "dbgenmodels", "dbgen", "exe", "eclat.exe"), "-f,", "-s{}".format(minsup), "-k,", "-Z", infname, outfname]  # -Z prints number of items per size
 
     fd, temp_path = tempfile.mkstemp()
     with open(temp_path, 'w') as tmpout:
@@ -337,7 +329,7 @@ class IGMGen:
     def __init__(self, indb):
         self.origDBfileName = indb
         self.origDBfilePath = os.path.join(os.getcwd(), "dbgenmodels", "dbgen", "db", indb)  # Original DB file name e.g. chess.dat
-        self.GenDBfilePath = os.path.join(os.getcwd(), "dbgenmodels", "dbgen", "out", "igmOut-" + indb)  # Newly generated DB file name.
+        self.GenDBfilePath = os.path.join(os.getcwd(), "dbgenmodels", "dbgen", "out", "gen-igm-" + indb)  # Newly generated DB file name.
         self.modelFileName = None  # to be determined on learn execution, depends on parameters. Same as igm class variable but this one is saved in file.
         self.originalDB = []  #  this one saves the original DB.         #  parse input file, figure out various statistics from dbfile
         self.igmModel = None  # model parameters [(itemset, prob),...]
@@ -676,30 +668,31 @@ if __name__ == '__main__':
     # for reproducibility
     np.random.seed(43)
 
-    # first, run eclat on original file to do comparisons
-    # K = eclat(args.dbfile)
-    # logging.info("Nr of frequent itemsets found is: '{}' (future K for lda generator)".format(K))
+
 
     # IGM generator model (igm)
     # REMEMBER TO CONSIDER ECLAT INPUT DB DELIMITER
     # igm = IGMGen(args.dbfile)
     # igm.learn(args.igm_minsup)
     # igm.gen()
-    # eclat(igm.GenDBfilePath)
+    # eclat(igm.GenDBfilePath, args.igm_minsup)
 
     # Krimp generator model (krimp)
     krimp = KrimpGen(args.dbfile)
     krimp.getCT()
     krimp.learn(args.krimp_minsup)
     krimp.gen()
-    eclat(krimp.GenDBfilePath)
+    eclat(krimp.GenDBfilePath, args.krimp_minsup)
 
+    # first, run eclat on original file to do comparisons
+    # K = eclat(args.dbfile)
+    # logging.info("Nr of frequent itemsets found is: '{}' (future K for lda generator)".format(K))
     # now, run first generator model (lda) and then eclat on synthetic db
     # lda = LDALearnGen(args.dbfile)
     # lda.learn(K, args.lda_passes)
     # lda.gen()
     # eclat(lda.newdbfile)
-    #
+
     # # run iim generator model (iim)
     # iim = IIMLearnGen(args.dbfile)
     # iim.learn(args.iim_passes)
