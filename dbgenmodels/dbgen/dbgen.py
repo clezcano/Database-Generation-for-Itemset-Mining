@@ -1,29 +1,23 @@
 """
 .. module:: dbgen
-
 dbgen
 ******
-
 :Description: dbgen
-
     input is a transactional database;
     generates various synthetic dbs based on statistical properties of input db
     using various probabilistic approaches
-
 :Authors:
     marias@cs.upc.edu
-
 :Version: 0.1
-
 :Date:  17/11/2017
 """
-
 from __future__ import print_function, division
 import argparse
 import numpy as np
 import logging
 from subprocess import call
-import re, os
+import re
+import os
 import gensim
 from gensim import corpora
 import time
@@ -32,7 +26,6 @@ import fileinput
 from itertools import combinations
 
 __author__ = 'marias'
-
 
 def parse_iim_output(fname, dictionary):
     # syntax is:  '{2, 13}	prob: 0,17160 	int: 1,00000'
@@ -48,7 +41,6 @@ def parse_iim_output(fname, dictionary):
                 prob_str = m.group(3).strip().replace(",", ".")
                 iims.append((itemset, float(prob_str)))
                 logging.debug("adding interesting itemset {}".format((itemset, prob_str)))
-
     return iims
 
 def print_timing(func):
@@ -70,20 +62,21 @@ def head(fname, nlines=5):
     inf.close()
 
 @print_timing
-def eclat(infname):
+def eclat(infname, minsup):
     """
     runs eclat on input db
     returns nr of frequent itemsets found and save them on file.
     """
     bname = os.path.splitext(os.path.basename(infname))[0]
-    outfname = "out/eclat-{}.itemsets".format(bname)
-    cmd = ["exe/eclat", "-f,", "-s{}".format(args.minsup), "-k,", "-Z", infname, outfname] # -Z prints number of items per size
+    infnamePath = os.path.join(os.getcwd(), "dbgenmodels", "dbgen", "db", infname)
+    outfnamePath = os.path.join(os.getcwd(), "dbgenmodels", "dbgen", "out", "eclat-{}-{}.itemsets".format(bname, minsup))
+    cmd = [os.path.join(os.getcwd(), "dbgenmodels", "dbgen", "exe", "eclat.exe"), '-f" "', "-s{}".format(minsup), '-k" "', "-Z", infnamePath, outfnamePath]  # -Z prints number of items per size
 
     fd, temp_path = tempfile.mkstemp()
     with open(temp_path, 'w') as tmpout:
         logging.info("running: {}".format(" ".join(cmd)))
         call(cmd, stdout=tmpout)
-        logging.info("wrote frequent itemset file {}".format(outfname))
+        logging.info("wrote frequent itemset file {}".format(outfnamePath))
 
     with open(temp_path) as inf:
         stat_str = inf.readlines()
@@ -109,9 +102,10 @@ class IIMLearnGen:
     """
 
     def __init__(self, indb):
-        self.dbfile = indb
-        self.newdbfile = "db/iim-" + os.path.basename(indb)
-        self.modelfname = None     # to be determined on learn execution, depends on parameters
+        self.origDBfileName = indb
+        self.origDBfilePath = os.path.join(os.getcwd(), "dbgenmodels", "dbgen", "db", self.origDBfileName)  # Original DB file name e.g. chess.dat
+        self.GenDBfilePath = os.path.join(os.getcwd(), "dbgenmodels", "dbgen", "db", "gen-iim-{}".format(os.path.basename(self.origDBfileName)))  # Newly generated DB file name.
+        self.modelFileName = None     # to be determined on learn execution, depends on parameters
         self.iims = None
         self.wordtoid = dict()
         self.idtoword = dict()
@@ -119,9 +113,10 @@ class IIMLearnGen:
         self.fimifile = "db/iim-" + os.path.splitext(os.path.basename(indb))[0] + ".fimi"
         self.m = 0    # nr of transactions in original db
 
+    def getFimiFile(self):
         with open(self.fimifile, 'w') as outf:
             nextid = 1
-            with open(args.dbfile) as inf:
+            with open(args.origDBfilePath) as inf:
                 for row in inf:
                     transaction = [item.strip().replace(" ", "_") for item in row.strip().split(',')]
                     for item in transaction:
@@ -134,53 +129,28 @@ class IIMLearnGen:
                     logging.debug("translating transaction {} to FIMI format as {}".format(transaction, fimi_transaction))
                     outf.write(" ".join([str(x) for x in fimi_transaction]) + "\n")
                     self.m += 1
-
-        logging.info("translated input file {} to fimi format in {}; {} transactions found with {} items".format(self.dbfile, self.fimifile, self.m, len(self.wordtoid)))
-
-    def load(self):
-        self.iims = []
-        with open(self.modelfname) as inf:
-            for line in inf:
-                itemset = line.strip().split(",")
-                prob = float(inf.readline().strip())
-                self.iims.append((itemset, prob))
-        logging.info("loaded IIM model from file {}".format(self.modelfname))
-
-    def save(self):
-        """ saves state to model file """
-        with open(self.modelfname, 'w') as outf:
-            for (itemset, p) in self.iims:
-                outf.write(",".join(itemset) + "\n")
-                outf.write(str(p) + "\n")
-        logging.info("wrote IIM model file to {}".format(self.modelfname))
+        logging.info("translated input file {} to fimi format in {}; {} transactions found with {} items".format(self.origDBfileName, self.fimifile, self.m, len(self.wordtoid)))
 
     @print_timing
     def learn(self, npasses):
-        self.modelfname = "models/iimmodel_passes{}".format(npasses)
-        if os.path.exists(self.modelfname):
+        self.modelFileName = os.path.join(os.getcwd(), "dbgenmodels", "dbgen", "models", "iim-model-{}-passes{}".format(self.origDBfileName, npasses))
+        if os.path.exists(self.modelFileName):
             self.load()
         else:
             logging.info("running IIM inference on corpus; passes = {}".format(npasses))
-
-            cmd = ["java", "-cp", "exe/itemset-mining-1.0.jar", "itemsetmining.main.ItemsetMining", "-i", str(npasses), "-f", self.fimifile, "-v"]
-
+            cmd = ["java", "-cp", os.path.join(os.getcwd(), "dbgenmodels", "dbgen", "exe", "itemset-mining-1.0.jar"), "itemsetmining.main.ItemsetMining", "-i", str(npasses), "-f", self.fimifile, "-v"]
             fd, temp_path = tempfile.mkstemp()
-
             with open(temp_path, 'w') as tmpout:
                 logging.info("running: {}".format(" ".join(cmd)))
                 call(cmd, stdout=tmpout)
                 logging.info("wrote iim output file {}".format(temp_path))
-
             # now, parse temp output file to retrieve iim model
             self.iims = parse_iim_output(temp_path, self.idtoword)
-
             # cleanup
             os.close(fd)
             os.remove(temp_path)
-
             # save state for future runs
             self.save()
-
         return len(self.iims)
 
     @print_timing
@@ -189,7 +159,7 @@ class IIMLearnGen:
         from learned model, generate synthetic database using probabilistic model iim
         returns new database file name
         """
-        with open(self.newdbfile, 'w') as outf:
+        with open(self.GenDBfilePath, 'w') as outf:
             ntrans = 0
             for i in range(self.m):
                 newtrans = set()
@@ -206,10 +176,25 @@ class IIMLearnGen:
                 # REPORT progress
                 if i and i % 1000 == 0:
                     logging.info("\tprocessed {} transactions of {} ({:0.1f}%).".format(i, self.m, 100.0*i/self.m))
+        logging.info("wrote synthetic database to file {}, with {} transactions ({:0.1f}%)".format(self.GenDBfilePath, ntrans, 100.0*ntrans/self.m))
+        return self.GenDBfilePath
 
-        logging.info("wrote synthetic database to file {}, with {} transactions ({:0.1f}%)".format(self.newdbfile, ntrans, 100.0*ntrans/self.m))
+    def load(self):
+        self.iims = []
+        with open(self.modelFileName) as inf:
+            for line in inf:
+                itemset = line.strip().split(" ")
+                prob = float(inf.readline().strip())
+                self.iims.append((itemset, prob))
+        logging.info("loaded IIM model from file {}".format(self.modelFileName))
 
-        return self.newdbfile
+    def save(self):
+        """ saves state to model file """
+        with open(self.modelFileName, 'w') as outf:
+            for (itemset, p) in self.iims:
+                outf.write(" ".join(itemset) + "\n")
+                outf.write(str(p) + "\n")
+        logging.info("wrote IIM model file to {}".format(self.modelFileName))
 
 # --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -300,7 +285,7 @@ class LDALearnGen:
                 if x:
                     items = np.random.multinomial(x, topics[j])
                     logging.debug("generated words: {}".format(items))
-                    for l,w in enumerate(items):
+                    for l, w in enumerate(items):
                         if w:
                             # add word l w-times -- but since it is a set, we will loose words
                             # also, may chose a word already put into the transaction so adding
@@ -337,7 +322,7 @@ class IGMGen:
     def __init__(self, indb):
         self.origDBfileName = indb
         self.origDBfilePath = os.path.join(os.getcwd(), "dbgenmodels", "dbgen", "db", indb)  # Original DB file name e.g. chess.dat
-        self.GenDBfilePath = os.path.join(os.getcwd(), "dbgenmodels", "dbgen", "out", "igmOut-" + indb)  # Newly generated DB file name.
+        self.GenDBfilePath = os.path.join(os.getcwd(), "dbgenmodels", "dbgen", "db", "gen-igm-" + indb)  # Newly generated DB file name.
         self.modelFileName = None  # to be determined on learn execution, depends on parameters. Same as igm class variable but this one is saved in file.
         self.originalDB = []  #  this one saves the original DB.         #  parse input file, figure out various statistics from dbfile
         self.igmModel = None  # model parameters [(itemset, prob),...]
@@ -426,7 +411,7 @@ class IGMGen:
 
     @print_timing
     def learn(self, minsup):
-        self.modelFileName = os.path.join(os.getcwd(), "dbgenmodels", "dbgen", "models", "igm{}{}".format(args.igm_minsup, self.origDBfileName))
+        self.modelFileName = os.path.join(os.getcwd(), "dbgenmodels", "dbgen", "models", "igm-model-{}{}".format(self.origDBfileName, args.igm_minsup))
         if os.path.exists(self.modelFileName):
             self.loadIgmModelFromFile()
         else:
@@ -566,7 +551,7 @@ class KrimpGen:
 
     @print_timing
     def learn(self, minsup):
-        self.modelFileName = os.path.join(os.getcwd(), "dbgenmodels", "dbgen", "models", "krimpmodel_{}".format(minsup))
+        self.modelFileName = os.path.join(os.getcwd(), "dbgenmodels", "dbgen", "models", "krimp-model-{}{}".format(self.origDBfileName, minsup))
         if os.path.exists(self.modelFileName):
             self.loadKrimpModelFromFile()
         else:
@@ -676,34 +661,33 @@ if __name__ == '__main__':
     # for reproducibility
     np.random.seed(43)
 
-    # first, run eclat on original file to do comparisons
-    # K = eclat(args.dbfile)
-    # logging.info("Nr of frequent itemsets found is: '{}' (future K for lda generator)".format(K))
-
     # IGM generator model (igm)
     # REMEMBER TO CONSIDER ECLAT INPUT DB DELIMITER
     # igm = IGMGen(args.dbfile)
     # igm.learn(args.igm_minsup)
     # igm.gen()
-    # eclat(igm.GenDBfilePath)
+    # eclat(igm.GenDBfilePath, args.igm_minsup)
 
     # Krimp generator model (krimp)
     krimp = KrimpGen(args.dbfile)
     krimp.getCT()
     krimp.learn(args.krimp_minsup)
     krimp.gen()
-    eclat(krimp.GenDBfilePath)
+    eclat(krimp.GenDBfilePath, args.krimp_minsup)
 
+    # first, run eclat on original file to do comparisons
+    # K = eclat(args.dbfile)
+    # logging.info("Nr of frequent itemsets found is: '{}' (future K for lda generator)".format(K))
     # now, run first generator model (lda) and then eclat on synthetic db
     # lda = LDALearnGen(args.dbfile)
     # lda.learn(K, args.lda_passes)
     # lda.gen()
     # eclat(lda.newdbfile)
-    #
+
     # # run iim generator model (iim)
     # iim = IIMLearnGen(args.dbfile)
     # iim.learn(args.iim_passes)
     # iim.gen()
-    # eclat(iim.newdbfile)
+    # eclat(iim.GenDBfilePath)
 
 
