@@ -103,55 +103,41 @@ class IIMLearnGen:
 
     def __init__(self, indb):
         self.origDBfileName = indb
+        self.origDBbaseName = os.path.splitext(os.path.basename(indb))[0]
         self.origDBfilePath = os.path.join(os.getcwd(), "dbgenmodels", "dbgen", "db", self.origDBfileName)  # Original DB file name e.g. chess.dat
         self.GenDBfilePath = os.path.join(os.getcwd(), "dbgenmodels", "dbgen", "db", "gen-iim-{}".format(os.path.basename(self.origDBfileName)))  # Newly generated DB file name.
-        self.modelFileName = None     # to be determined on learn execution, depends on parameters
-        self.iims = None
-        self.wordtoid = dict()
-        self.idtoword = dict()
-        # translate to FIMI
-        self.fimifile = "db/iim-" + os.path.splitext(os.path.basename(indb))[0] + ".fimi"
-        self.m = 0    # nr of transactions in original db
-
-    def getFimiFile(self):
-        with open(self.fimifile, 'w') as outf:
-            nextid = 1
-            with open(args.origDBfilePath) as inf:
-                for row in inf:
-                    transaction = [item.strip().replace(" ", "_") for item in row.strip().split(',')]
-                    for item in transaction:
-                        if item not in self.wordtoid:
-                            self.wordtoid[item] = nextid
-                            self.idtoword[nextid] = item
-                            nextid += 1
-                    # write transaction to fimi file
-                    fimi_transaction = sorted([self.wordtoid[item] for item in transaction])
-                    logging.debug("translating transaction {} to FIMI format as {}".format(transaction, fimi_transaction))
-                    outf.write(" ".join([str(x) for x in fimi_transaction]) + "\n")
-                    self.m += 1
-        logging.info("translated input file {} to fimi format in {}; {} transactions found with {} items".format(self.origDBfileName, self.fimifile, self.m, len(self.wordtoid)))
+        self.modelFilePath = None     # to be determined on learn execution, depends on parameters
+        self.iimsModel = None
+        self.originalDB = []
+        self.itemAlphabet = set()
+        with open(args.origDBfilePath) as inf:
+            for row in inf:
+                    transaction = sorted([int(item.strip()) for item in row.strip().split(" ")])
+                    self.originalDB.append(transaction)
+                    self.itemAlphabet |= set(transaction)
+        logging.info("load input file {} ; {} transactions found with {} items".format(self.origDBfileName, len(self.originalDB), len(self.itemAlphabet))
 
     @print_timing
     def learn(self, npasses):
-        self.modelFileName = os.path.join(os.getcwd(), "dbgenmodels", "dbgen", "models", "iim-model-{}-passes{}".format(self.origDBfileName, npasses))
-        if os.path.exists(self.modelFileName):
-            self.load()
+        self.modelFilePath = os.path.join(os.getcwd(), "dbgenmodels", "dbgen", "models", "iim-model-{}-passes{}".format(self.origDBbaseName, npasses))
+        if os.path.exists(self.modelFilePath):
+            self.loadfromFile()
         else:
             logging.info("running IIM inference on corpus; passes = {}".format(npasses))
-            cmd = ["java", "-cp", os.path.join(os.getcwd(), "dbgenmodels", "dbgen", "exe", "itemset-mining-1.0.jar"), "itemsetmining.main.ItemsetMining", "-i", str(npasses), "-f", self.fimifile, "-v"]
+            cmd = ["java", "-cp", os.path.join(os.getcwd(), "dbgenmodels", "dbgen", "exe", "itemset-mining-1.0.jar"), "itemsetmining.main.ItemsetMining", "-i", str(npasses), "-f", self.origDBfilePath, "-v"]
             fd, temp_path = tempfile.mkstemp()
             with open(temp_path, 'w') as tmpout:
                 logging.info("running: {}".format(" ".join(cmd)))
                 call(cmd, stdout=tmpout)
                 logging.info("wrote iim output file {}".format(temp_path))
             # now, parse temp output file to retrieve iim model
-            self.iims = parse_iim_output(temp_path, self.idtoword)
+            self.iimsModel = self.getiimsModel(temp_path)
             # cleanup
             os.close(fd)
             os.remove(temp_path)
             # save state for future runs
-            self.save()
-        return len(self.iims)
+            self.saveiimsModel()
+        return len(self.iimsModel)
 
     @print_timing
     def gen(self):
@@ -161,40 +147,57 @@ class IIMLearnGen:
         """
         with open(self.GenDBfilePath, 'w') as outf:
             ntrans = 0
-            for i in range(self.m):
-                newtrans = set()
-                for (items, p) in self.iims:
+            oriDBsize = len(self.originalDB)
+            for i in range(oriDBsize):
+                newTrans = set()
+                for (itemset, p) in self.iimsModel:
                     # bernoulli trial
                     if np.random.binomial(1, p):
-                        logging.debug("===> adding iim {} to current transaction {}".format(items, i))
-                        newtrans |= set(items)
-                newitems = ",".join(sorted(newtrans))
-                if len(newtrans):
-                    outf.write(newitems + "\n")
-                    logging.debug("writing transaction to new db: {}".format(newitems))
+                        logging.debug("===> adding itemset {} to current transaction {}".format(itemset, i))
+                        newTrans |= set(itemset)
+                genTrans = " ".join(sorted(newTrans))
+                if len(newTrans):
+                    outf.write(genTrans + "\n")
+                    logging.debug("writing transaction to new db: {}".format(genTrans))
                     ntrans += 1
                 # REPORT progress
                 if i and i % 1000 == 0:
-                    logging.info("\tprocessed {} transactions of {} ({:0.1f}%).".format(i, self.m, 100.0*i/self.m))
-        logging.info("wrote synthetic database to file {}, with {} transactions ({:0.1f}%)".format(self.GenDBfilePath, ntrans, 100.0*ntrans/self.m))
+                    logging.info("\tprocessed {} transactions of {} ({:0.1f}%).".format(i, oriDBsize, 100.0*i/oriDBsize))
+        logging.info("wrote synthetic database to file {}, with {} transactions ({:0.1f}%)".format(self.GenDBfilePath, ntrans, 100.0*ntrans/oriDBsize))
         return self.GenDBfilePath
 
-    def load(self):
-        self.iims = []
-        with open(self.modelFileName) as inf:
+    def getiimsModel(self, fname):
+        # syntax is:  '{2, 13}	prob: 0,17160 	int: 1,00000'
+        # translate back to string as well
+        pattern = re.compile(r'\{(.+)\}(\s+)prob: ([\d,]+)(\s+)int')
+        model = []
+        with open(fname) as inf:
+            logging.info("parsing iim output file {}".format(fname))
             for line in inf:
-                itemset = line.strip().split(" ")
-                prob = float(inf.readline().strip())
-                self.iims.append((itemset, prob))
-        logging.info("loaded IIM model from file {}".format(self.modelFileName))
+                m = re.match(pattern, line)
+                if m:
+                    itemset = sorted([int(item.strip()) for item in m.group(1).strip().split(",")])
+                    prob = m.group(3).strip().replace(",", ".")
+                    model.append((itemset, float(prob)))
+                    logging.debug("adding interesting itemset {}".format((itemset, prob)))
+        return model
 
-    def save(self):
+    def loadfromFile(self):
+        self.iimsModel = []
+        with open(self.modelFilePath) as inf:
+            for line in inf:
+                itemset = [int(item.strip()) for item in line.strip().split(" ")]
+                prob = float(inf.readline().strip())
+                self.iimsModel.append((itemset, prob))
+        logging.info("loaded IIM model from file {}".format(self.modelFilePath))
+
+    def saveiimsModel(self):
         """ saves state to model file """
-        with open(self.modelFileName, 'w') as outf:
-            for (itemset, p) in self.iims:
+        with open(self.modelFilePath, 'w') as outf:
+            for (itemset, p) in self.iimsModel:
                 outf.write(" ".join(itemset) + "\n")
                 outf.write(str(p) + "\n")
-        logging.info("wrote IIM model file to {}".format(self.modelFileName))
+        logging.info("wrote IIM model file to {}".format(self.modelFilePath))
 
 # --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
