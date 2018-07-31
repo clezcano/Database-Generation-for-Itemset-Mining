@@ -62,7 +62,7 @@ def head(fname, nlines=5):
     inf.close()
 
 @print_timing
-def eclat(infname, minsup):
+def eclatLDA(infname, minsup):
     """
     runs eclat on input db
     returns nr of frequent itemsets found and save them on file.
@@ -71,26 +71,21 @@ def eclat(infname, minsup):
     infnamePath = os.path.join(os.getcwd(), "dbgenmodels", "dbgen", "db", infname)
     outfnamePath = os.path.join(os.getcwd(), "dbgenmodels", "dbgen", "out", "eclat-{}-{}.itemsets".format(bname, minsup))
     cmd = [os.path.join(os.getcwd(), "dbgenmodels", "dbgen", "exe", "eclat.exe"), '-f" "', "-s{}".format(minsup), '-k" "', "-Z", infnamePath, outfnamePath]  # -Z prints number of items per size
-
     fd, temp_path = tempfile.mkstemp()
     with open(temp_path, 'w') as tmpout:
         logging.info("running: {}".format(" ".join(cmd)))
         call(cmd, stdout=tmpout)
         logging.info("wrote frequent itemset file {}".format(outfnamePath))
-
     with open(temp_path) as inf:
         stat_str = inf.readlines()
         logging.info("eclat stats on file {}: {}".format(infname, stat_str))
-
     nfreqitemsets = 0
     if len(stat_str):
         m = re.match(r'all: (\d+)', stat_str[0])
         if m:
             nfreqitemsets = int(m.group(1))
-
     os.close(fd)
     os.remove(temp_path)
-
     return nfreqitemsets
 
 # --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -115,7 +110,7 @@ class IIMLearnGen:
                     transaction = sorted([int(item.strip()) for item in row.strip().split(" ")])
                     self.originalDB.append(transaction)
                     self.itemAlphabet |= set(transaction)
-        logging.info("load input file {} ; {} transactions found with {} items".format(self.origDBfileName, len(self.originalDB), len(self.itemAlphabet))
+        logging.info("load input file {} ; {} transactions found with {} items".format(self.origDBfileName, len(self.originalDB), len(self.itemAlphabet)))
 
     @print_timing
     def learn(self, npasses):
@@ -207,31 +202,24 @@ class LDALearnGen:
     """
 
     def __init__(self, indb):
-        self.dbfile = indb
-        self.newdbfile = "db/lda-" + os.path.basename(indb)
-        self.modelfname = None     # to be determined on learn execution, depends on parameters
+        self.origDBfileName = indb
+        self.origDBbaseName = os.path.splitext(os.path.basename(indb))[0]
+        self.origDBfilePath = os.path.join(os.getcwd(), "dbgenmodels", "dbgen", "db", self.origDBfileName)  # Original DB file name e.g. chess.dat
+        self.GenDBfilePath = os.path.join(os.getcwd(), "dbgenmodels", "dbgen", "db", "gen-lda-{}".format(os.path.basename(self.origDBfileName)))  # Newly generated DB file name.
+        self.modelFilePath = None     # to be determined on learn execution, depends on parameters
         self.K = None
         self.npasses = None
         self.lda = None             # model parameters
         self.dictionary = None      # link between item descriptions and ids
         # parse input file, figure out various statistics from dbfile
-        self.db = []
-        items = set()
-        with open(args.dbfile) as infile:
+        self.originalDB = []
+        self.itemAlphabet = set()
+        with open(self.origDBfilePath) as infile:
             for row in infile:
-                transaction = [item.strip().replace(" ", "_") for item in row.strip().split(',')]
-                items |= set(transaction)
-                self.db.append(sorted(transaction))
-
-        logging.info("Nr of transactions in {}: {}, Nr. of items: {}".format(args.dbfile, len(self.db), len(items)))
-
-    def load(self):
-        self.lda = gensim.models.LdaModel.load(self.modelfname)
-        logging.info("loaded persistent model from file {}".format(self.modelfname))
-
-    def save(self):
-        self.lda.save(self.modelfname)
-        logging.info("saved model in file '{}'".format(self.modelfname))
+                transaction = sorted([int(item.strip()) for item in row.strip().split(" ")])
+                self.itemAlphabet |= set(transaction)
+                self.originalDB.append(transaction)
+        logging.info("Nr of transactions in {}: {}, Nr. of items: {}".format(self.origDBfileName, len(self.originalDB), len(self.itemAlphabet)))
 
     @print_timing
     def learn(self, K, npasses):
@@ -246,11 +234,11 @@ class LDALearnGen:
         self.K = K
         self.npasses = npasses
         # load db
-        self.dictionary = corpora.Dictionary(self.db)
-        transaction_matrix = [self.dictionary.doc2bow(trans) for trans in self.db]
+        self.dictionary = corpora.Dictionary(self.originalDB)
+        transaction_matrix = [self.dictionary.doc2bow(trans) for trans in self.originalDB]
         logging.info("Size of transaction matrix: {}".format(len(transaction_matrix)))
-        self.modelfname = "models/ldamodel_K{}_passes{}".format(K, npasses)
-        if os.path.exists(self.modelfname):
+        self.modelFilePath = os.path.join(os.getcwd(), "dbgenmodels", "dbgen", "models", "lda_model_K{}_passes{}".format(K, npasses))
+        if os.path.exists(self.modelFilePath):
             self.load()
         else:
             logging.info("running LDA inference on corpus; K = {}, passes = {}".format(K, npasses))
@@ -267,16 +255,16 @@ class LDALearnGen:
         returns new database file name
         """
         topics = self.lda.get_topics()
-        newdb = []
-        m = len(self.db)    # use same size of original database
-        for i in range(m):
+        genDB = []
+        genDBsize = len(self.originalDB)    # use same size of original database
+        for i in range(genDBsize):
             # use same length of transaction as original database
-            n = len(self.db[i])
+            transSize = len(self.originalDB[i])
             # use multinomial for transaction according to fitted lda model
-            mixture = self.lda[self.dictionary.doc2bow(self.db[i])]
+            mixture = self.lda[self.dictionary.doc2bow(self.originalDB[i])]
             logging.debug("topic mixture for transaction {}: {}".format(i, mixture))
             # chose topics accoring to multinomial mixture, for all words at once
-            trans_topics = np.random.multinomial(n, [x for _, x in mixture])
+            trans_topics = np.random.multinomial(transSize, [x for _, x in mixture])
             # now, generate words for each of the chosen topics
             this_transaction = set()
             for j, x in enumerate(trans_topics):
@@ -291,21 +279,29 @@ class LDALearnGen:
                             logging.debug("--adding word id {} which is {}, {} times".format(l, self.dictionary[l], w))
                             this_transaction.add(self.dictionary[l])
             # add created transaction to new db
-            newdb.append(sorted(this_transaction))
-            logging.debug(">>original transaction size {}, generated transaction size {}".format(n, len(this_transaction)))
-            logging.debug(">>original transaction: {}, generated transaction: {}".format(sorted(self.db[i]), sorted(this_transaction)))
+            genDB.append(sorted(this_transaction))
+            logging.debug(">>original transaction size {}, generated transaction size {}".format(transSize, len(this_transaction)))
+            logging.debug(">>original transaction: {}, generated transaction: {}".format(sorted(self.originalDB[i]), sorted(this_transaction)))
             # REPORT progress
             if i and i % 1000 == 0:
-                logging.info("\tprocessed {} transactions of {} ({:0.1f}%).".format(i, m, 100.0*i/m))
+                logging.info("\tprocessed {} transactions of {} ({:0.1f}%).".format(i, genDBsize, 100.0*i/genDBsize))
         # write result to file
-        outf = open(self.newdbfile, "w")
-        for trans in newdb:
+        outf = open(self.GenDBfilePath, "w")
+        for trans in genDB:
             newitems = ",".join(sorted(trans))
             outf.write(newitems + "\n")
             logging.debug("writing transaction to new db: {}".format(newitems))
         outf.close()
-        logging.info("wrote synthetic database to file {}".format(self.newdbfile))
-        return self.newdbfile
+        logging.info("wrote synthetic database to file {}".format(self.GenDBfilePath))
+        return self.GenDBfilePath
+
+    def load(self):
+        self.lda = gensim.models.LdaModel.load(self.modelFilePath)
+        logging.info("loaded persistent model from file {}".format(self.modelFilePath))
+
+    def save(self):
+        self.lda.save(self.modelFilePath)
+        logging.info("saved model in file '{}'".format(self.modelFilePath))
 
 # --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -662,28 +658,28 @@ if __name__ == '__main__':
     # igm = IGMGen(args.dbfile)
     # igm.learn(args.igm_minsup)
     # igm.gen()
-    # eclat(igm.GenDBfilePath, args.igm_minsup)
+    # eclatLDA(igm.GenDBfilePath, args.igm_minsup)
 
     # Krimp generator model (krimp)
     krimp = KrimpGen(args.dbfile)
     krimp.getCT()
     krimp.learn(args.krimp_minsup)
     krimp.gen()
-    eclat(krimp.GenDBfilePath, args.krimp_minsup)
+    eclatLDA(krimp.GenDBfilePath, args.krimp_minsup)
 
     # first, run eclat on original file to do comparisons
-    # K = eclat(args.dbfile)
+    # K = eclatLDA(args.dbfile)
     # logging.info("Nr of frequent itemsets found is: '{}' (future K for lda generator)".format(K))
     # now, run first generator model (lda) and then eclat on synthetic db
     # lda = LDALearnGen(args.dbfile)
     # lda.learn(K, args.lda_passes)
     # lda.gen()
-    # eclat(lda.newdbfile)
+    # eclatLDA(lda.newdbfile)
 
     # # run iim generator model (iim)
     # iim = IIMLearnGen(args.dbfile)
     # iim.learn(args.iim_passes)
     # iim.gen()
-    # eclat(iim.GenDBfilePath)
+    # eclatLDA(iim.GenDBfilePath)
 
 
