@@ -245,13 +245,10 @@ class LDALearnGen:
         # record parameter settings
         self.K = K
         self.npasses = npasses
-
         # load db
         self.dictionary = corpora.Dictionary(self.db)
         transaction_matrix = [self.dictionary.doc2bow(trans) for trans in self.db]
-
         logging.info("Size of transaction matrix: {}".format(len(transaction_matrix)))
-
         self.modelfname = "models/ldamodel_K{}_passes{}".format(K, npasses)
         if os.path.exists(self.modelfname):
             self.load()
@@ -260,7 +257,6 @@ class LDALearnGen:
             self.lda = gensim.models.ldamodel.LdaModel(transaction_matrix, num_topics=K, id2word = self.dictionary, passes=int(npasses), alpha = 'auto')
             # save model to file for future reference
             self.save()
-
         for k in range(K):
             logging.debug(self.lda.print_topic(k))
 
@@ -271,7 +267,6 @@ class LDALearnGen:
         returns new database file name
         """
         topics = self.lda.get_topics()
-
         newdb = []
         m = len(self.db)    # use same size of original database
         for i in range(m):
@@ -302,7 +297,6 @@ class LDALearnGen:
             # REPORT progress
             if i and i % 1000 == 0:
                 logging.info("\tprocessed {} transactions of {} ({:0.1f}%).".format(i, m, 100.0*i/m))
-
         # write result to file
         outf = open(self.newdbfile, "w")
         for trans in newdb:
@@ -311,7 +305,6 @@ class LDALearnGen:
             logging.debug("writing transaction to new db: {}".format(newitems))
         outf.close()
         logging.info("wrote synthetic database to file {}".format(self.newdbfile))
-
         return self.newdbfile
 
 # --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
