@@ -242,7 +242,7 @@ class LDALearnGen:
             self.load()
         else:
             logging.info("running LDA inference on corpus; K = {}, passes = {}".format(K, npasses))
-            self.lda = gensim.models.ldamodel.LdaModel(transaction_matrix, num_topics=K, id2word = self.dictionary, passes=int(npasses), alpha = 'auto')
+            self.lda = gensim.models.ldamodel.LdaModel(transaction_matrix, num_topics=K, id2word=self.dictionary, passes=int(npasses), alpha='auto')
             # save model to file for future reference
             self.save()
         for k in range(K):
@@ -288,7 +288,7 @@ class LDALearnGen:
         # write result to file
         outf = open(self.GenDBfilePath, "w")
         for trans in genDB:
-            newitems = ",".join(sorted(trans))
+            newitems = " ".join(sorted(trans))
             outf.write(newitems + "\n")
             logging.debug("writing transaction to new db: {}".format(newitems))
         outf.close()
