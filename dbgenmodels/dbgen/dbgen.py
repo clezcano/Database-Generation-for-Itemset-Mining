@@ -18,6 +18,8 @@ import logging
 from subprocess import call
 import re
 import os
+import warnings
+warnings.filterwarnings(action='ignore', category=UserWarning, module='gensim')
 import gensim
 from gensim import corpora
 import time
@@ -344,17 +346,21 @@ class IGMGen:
         with open(self.GenDBfilePath, 'w') as genFile:
             ntrans = 0
             for i in range(len(self.originalDB)):
+            #for i in [0]:
                 newTransaction = []
                 itemsetIndex = self.chooseItemset()
+                logging.info("itemset selected : {} for transaction  {}".format(itemsetIndex, i))
                 pattern = self.choosePattern(itemsetIndex)
+                logging.info("pattern selected : {} for transaction  {}".format(pattern, i))
                 noise = self.chooseNoise(itemsetIndex)
+                logging.info("itemset selected : {} for transaction  {}".format(noise, i))
                 newTransaction = pattern + noise  # both parameters should be sets.
-                newTrans = " ".join(sorted(newTransaction))
+                newTrans = " ".join(sorted(map(str,newTransaction)))
                 (itemset, p) = self.igmModel[itemsetIndex]
-                logging.debug("===> generating transaction nr: {}; freq. itemset selected: {}; pattern selected: {}; noise pattern selected: {}".format(i, itemset, pattern, noise))
+                logging.info("===> generating transaction nr: {}; freq. itemset selected: {}; pattern selected: {}; noise pattern selected: {}".format(i, itemset, pattern, noise))
                 if len(newTrans):
                     genFile.write(newTrans + "\n")
-                    logging.debug("writing transaction to new db: {}".format(newTrans))
+                    logging.info("writing transaction to new db: {}".format(newTrans))
                     ntrans += 1
                 # REPORT progress
                 if i and i % 1000 == 0:
@@ -413,7 +419,7 @@ class IGMGen:
     def chooseItemset(self):
         freq = [p for (itemset, p) in self.igmModel]
         sumFreq = sum(freq)
-        return np.random.choice(len(self.igmModel), [p / sumFreq for p in freq])
+        return np.random.choice(len(self.igmModel), p=[p / sumFreq for p in freq])
 
     def choosePattern(self, itemsetIndex):
         (itemset, p) = self.igmModel[itemsetIndex]
@@ -424,20 +430,23 @@ class IGMGen:
         freqList = [p] + [100 * uniformProb] * len(subsets)
         sumfreq = sum(freqList)
         subsets = [itemset] + subsets
-        return np.random.choice(subsets, [freq / sumfreq for freq in freqList])
+        return subsets[np.random.choice(len(subsets), p=[freq / sumfreq for freq in freqList])]
 
     def chooseNoise(self, itemsetIndex):
         (itemset, p) = self.igmModel[itemsetIndex]
-        noise = list(self.itemAlphabet.difference(set(itemset)))
+        newAlphabet = set()
+        for (auxitemset, _) in self.igmModel:
+            newAlphabet |= set(auxitemset)
+        print("newAlphabet :", len(newAlphabet))
+        noise = sorted(list(newAlphabet.difference(set(itemset))))
         subsets = []
         for i in range(1, len(noise)):
             subsets.extend([list(comb) for comb in combinations(noise, i)])
-        uniformProb = 1 / (2 ** (len(self.itemAlphabet) - len(itemset)))
+        uniformProb = 1 / (2 ** (len(newAlphabet) - len(itemset)))
         subsets = [noise] + subsets
         freqList = [100 * uniformProb] * len(subsets)
         sumfreq = sum(freqList)
-        return np.random.choice(subsets, [freq / sumfreq for freq in freqList])
-
+        return np.random.choice(subsets, p=[freq / sumfreq for freq in freqList])
 
 # --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -594,7 +603,7 @@ class KrimpGen:
         itemsets = [itemset for (itemset, p) in auxCT]
         freq = [p for (itemset, p) in auxCT]
         sumFreq = sum(freq)
-        return np.random.choice(itemsets, [p / sumFreq for p in freq])
+        return np.random.choice(itemsets, p=[p / sumFreq for p in freq])
 
     def getDomains(self, itemset):  # itemset must be in Krimp format
         return [self.domainToItem[self.krimpToCateg[item]] for item in itemset]
@@ -636,11 +645,11 @@ if __name__ == '__main__':
     # arguments setup
     parser = argparse.ArgumentParser()
     parser.add_argument('--logfile', default=None, help='Log file')
-    parser.add_argument('--dbfile', default='chess.dat', help='Input database (only format accepted .dat)')
+    parser.add_argument('--dbfile', default='dataset-246.dat', help='Input database (only format accepted .dat)')
     # parser.add_argument('--minsup', default=75, help='Minimum support threshold')
     parser.add_argument('--lda_passes', default=200, help='Nr of passes over input data for lda parameter estimation')
     parser.add_argument('--iim_passes', default=500, help='Nr of iterations over input data for iim parameter estimation')
-    parser.add_argument('--igm_minsup', default=75, help='positive: percentage of transactions, negative: exact number of transactions e.g. 50 or -50')
+    parser.add_argument('--igm_minsup', default=85, help='positive: percentage of transactions, negative: exact number of transactions e.g. 50 or -50')
     parser.add_argument('--krimp_minsup', default=None, help='<integer>--Absolute minsup (e.g. 10, 42, 512), <float>-- Relative minsup (e.g. 0.1 would be 10% of database size)')
     parser.add_argument('--krimp_type', default=all, help='Candidate type determined by [ all | cls | closed ]')
     parser.add_argument('--krimp_CTfilename', default=None, help='CT name file')
