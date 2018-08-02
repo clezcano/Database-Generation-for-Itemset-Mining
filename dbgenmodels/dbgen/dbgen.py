@@ -345,17 +345,17 @@ class IGMGen:
     def gen(self):
         with open(self.GenDBfilePath, 'w') as genFile:
             ntrans = 0
-            for i in range(len(self.originalDB)):
-            #for i in [0]:
+            # for i in range(len(self.originalDB)):
+            for i in range(5):
                 newTransaction = []
                 itemsetIndex = self.chooseItemset()
-                logging.info("itemset selected : {} for transaction  {}".format(itemsetIndex, i))
+                logging.info("itemset index selected : {} for transaction  {}".format(itemsetIndex, i))
                 pattern = self.choosePattern(itemsetIndex)
                 logging.info("pattern selected : {} for transaction  {}".format(pattern, i))
                 noise = self.chooseNoise(itemsetIndex)
-                logging.info("itemset selected : {} for transaction  {}".format(noise, i))
+                logging.info("noise selected : {} for transaction  {}".format(noise, i))
                 newTransaction = pattern + noise  # both parameters should be sets.
-                newTrans = " ".join(sorted(map(str,newTransaction)))
+                newTrans = " ".join(map(str,sorted(newTransaction)))
                 (itemset, p) = self.igmModel[itemsetIndex]
                 logging.info("===> generating transaction nr: {}; freq. itemset selected: {}; pattern selected: {}; noise pattern selected: {}".format(i, itemset, pattern, noise))
                 if len(newTrans):
@@ -427,26 +427,33 @@ class IGMGen:
         for i in range(1, len(itemset)):
             subsets.extend([list(comb) for comb in combinations(itemset, i)])
         uniformProb = (1 - (p / 100)) / (2 ** len(itemset) - 1)
-        freqList = [p] + [100 * uniformProb] * len(subsets)
+        freqList = [p] + ([100 * uniformProb] * len(subsets))
         sumfreq = sum(freqList)
+        print("pattern before subsets: ", subsets)
         subsets = [itemset] + subsets
+        print("pattern after subsets: ", subsets)
+        print("pattern freqList: ", freqList)
         return subsets[np.random.choice(len(subsets), p=[freq / sumfreq for freq in freqList])]
+        # return np.random.choice(subsets, p=[freq / sumfreq for freq in freqList])
 
     def chooseNoise(self, itemsetIndex):
         (itemset, p) = self.igmModel[itemsetIndex]
         newAlphabet = set()
         for (auxitemset, _) in self.igmModel:
             newAlphabet |= set(auxitemset)
-        print("newAlphabet :", len(newAlphabet))
+        # print("newAlphabet :", len(newAlphabet))
         noise = sorted(list(newAlphabet.difference(set(itemset))))
         subsets = []
         for i in range(1, len(noise)):
             subsets.extend([list(comb) for comb in combinations(noise, i)])
         uniformProb = 1 / (2 ** (len(newAlphabet) - len(itemset)))
         subsets = [noise] + subsets
+        print("noise subsets: ", subsets)
         freqList = [100 * uniformProb] * len(subsets)
+        print("noise freqList: ", freqList)
         sumfreq = sum(freqList)
-        return np.random.choice(subsets, p=[freq / sumfreq for freq in freqList])
+        # return np.random.choice(subsets, p=[freq / sumfreq for freq in freqList])
+        return subsets[np.random.choice(len(subsets), p=[freq / sumfreq for freq in freqList])]
 
 # --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -649,7 +656,7 @@ if __name__ == '__main__':
     # parser.add_argument('--minsup', default=75, help='Minimum support threshold')
     parser.add_argument('--lda_passes', default=200, help='Nr of passes over input data for lda parameter estimation')
     parser.add_argument('--iim_passes', default=500, help='Nr of iterations over input data for iim parameter estimation')
-    parser.add_argument('--igm_minsup', default=85, help='positive: percentage of transactions, negative: exact number of transactions e.g. 50 or -50')
+    parser.add_argument('--igm_minsup', default=75, help='positive: percentage of transactions, negative: exact number of transactions e.g. 50 or -50')
     parser.add_argument('--krimp_minsup', default=None, help='<integer>--Absolute minsup (e.g. 10, 42, 512), <float>-- Relative minsup (e.g. 0.1 would be 10% of database size)')
     parser.add_argument('--krimp_type', default=all, help='Candidate type determined by [ all | cls | closed ]')
     parser.add_argument('--krimp_CTfilename', default=None, help='CT name file')
@@ -660,8 +667,10 @@ if __name__ == '__main__':
         logging.basicConfig(filename=args.logfile, format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
     else:
         logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
+
     # for reproducibility
-    np.random.seed(43)
+    # np.random.seed(50)
+
     # IGM generator model (igm)
     igm = IGMGen(args.dbfile)
     igm.learn(args.igm_minsup)
