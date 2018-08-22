@@ -12,20 +12,20 @@ dbgen
 :Date:  17/11/2017
 """
 from __future__ import print_function, division
-import argparse
-import numpy as np
-import logging
-from subprocess import call, Popen
-import re
-import os
-import warnings
-warnings.filterwarnings(action='ignore', category=UserWarning, module='gensim')
-import gensim
-from gensim import corpora
 import time
 import tempfile
 import fileinput
 from itertools import combinations
+import argparse
+import numpy as np
+import logging
+from subprocess import call
+import re
+import os
+import warnings
+# warnings.filterwarnings(action='ignore', category=UserWarning, module='gensim')
+# import gensim
+# from gensim import corpora
 
 __author__ = 'marias'
 
@@ -558,13 +558,13 @@ class IIMLearnGen:
     def __init__(self, indb):
         self.origDBfileName = indb
         self.origDBbaseName = os.path.splitext(os.path.basename(indb))[0]
-        self.origDBfilePath = os.path.join(os.getcwd(), "dbgenmodels", "dbgen", "db", self.origDBfileName)  # Original DB file name e.g. chess.dat
-        self.GenDBfilePath = os.path.join(os.getcwd(), "dbgenmodels", "dbgen", "db", "gen-iim-{}".format(os.path.basename(self.origDBfileName)))  # Newly generated DB file name.
+        self.origDBfilePath = os.path.join(os.getcwd(), "db", self.origDBfileName)  # Original DB file name e.g. chess.dat
+        self.GenDBfilePath = os.path.join(os.getcwd(), "db", "gen-iim-{}".format(os.path.basename(self.origDBfileName)))  # Newly generated DB file name.
         self.modelFilePath = None     # to be determined on learn execution, depends on parameters
         self.iimsModel = None
         self.originalDB = []
         self.itemAlphabet = set()
-        with open(args.origDBfilePath) as inf:
+        with open(self.origDBfilePath) as inf:
             for row in inf:
                     transaction = sorted([int(item.strip()) for item in row.strip().split(" ")])
                     self.originalDB.append(transaction)
@@ -573,12 +573,12 @@ class IIMLearnGen:
 
     @print_timing
     def learn(self, npasses):
-        self.modelFilePath = os.path.join(os.getcwd(), "dbgenmodels", "dbgen", "models", "iim-model-{}-passes{}".format(self.origDBbaseName, npasses))
+        self.modelFilePath = os.path.join(os.getcwd(), "models", "iim-model-{}-passes{}".format(self.origDBbaseName, npasses))
         if os.path.exists(self.modelFilePath):
             self.loadfromFile()
         else:
             logging.info("running IIM inference on corpus; passes = {}".format(npasses))
-            cmd = ["java", "-cp", os.path.join(os.getcwd(), "dbgenmodels", "dbgen", "exe", "itemset-mining-1.0.jar"), "itemsetmining.main.ItemsetMining", "-i", str(npasses), "-f", self.origDBfilePath, "-v"]
+            cmd = ["java", "-cp", os.path.join(os.getcwd(), "exe", "itemset-mining-1.0.jar"), "itemsetmining.main.ItemsetMining", "-i", str(npasses), "-f", self.origDBfilePath, "-v"]
             fd, temp_path = tempfile.mkstemp()
             with open(temp_path, 'w') as tmpout:
                 logging.info("running: {}".format(" ".join(cmd)))
@@ -660,8 +660,8 @@ if __name__ == '__main__':
     # arguments setup
     parser = argparse.ArgumentParser()
     parser.add_argument('--logfile', default=None, help='Log file')
-    parser.add_argument('--dbfile', default='chess.dat', help='Input database (only format accepted .dat)')
-    # parser.add_argument('--minsup', default=75, help='Minimum support threshold')
+    parser.add_argument('--dbfile', default='dataset246.dat', help='Input database (only format accepted .dat)')
+    parser.add_argument('--minsup', default=75, help='Minimum support threshold')
 
     parser.add_argument('--krimp_minsup', default=2397, help='<integer>--Absolute minsup (e.g. 10, 42, 512)')
     parser.add_argument('--krimp_type', default='all', help='Candidate type determined by [ all | cls | closed ]')
@@ -683,10 +683,10 @@ if __name__ == '__main__':
     # np.random.seed(50)
 
     # IGM generator model (igm)
-    igm = IGMGen(args.dbfile)
-    igm.learn(args.igm_minsup)
-    igm.gen()
-    eclatLDA(igm.GenDBfilePath, args.igm_minsup)
+    # igm = IGMGen(args.dbfile)
+    # igm.learn(args.igm_minsup)
+    # igm.gen()
+    # eclatLDA(igm.GenDBfilePath, args.igm_minsup)
 
     # Krimp generator model (krimp)
     # krimp = KrimpGen(args.dbfile)
@@ -704,10 +704,10 @@ if __name__ == '__main__':
     # lda.gen()
     # eclatLDA(lda.newdbfile)
 
-    # # run iim generator model (iim)
-    # iim = IIMLearnGen(args.dbfile)
-    # iim.learn(args.iim_passes)
-    # iim.gen()
-    # eclatLDA(iim.GenDBfilePath)
+    # run iim generator model (iim)
+    iim = IIMLearnGen(args.dbfile)
+    iim.learn(args.iim_passes)
+    iim.gen()
+    eclatLDA(iim.GenDBfilePath, args.minsup)
 
 
