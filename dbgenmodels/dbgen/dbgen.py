@@ -609,7 +609,7 @@ class IIMLearnGen:
                     if np.random.binomial(1, p):
                         logging.debug("===> adding itemset {} to current transaction {}".format(itemset, i))
                         newTrans |= set(itemset)
-                genTrans = " ".join(sorted(newTrans))
+                genTrans = " ".join(map(str, sorted(newTrans)))
                 if len(newTrans):
                     outf.write(genTrans + "\n")
                     logging.debug("writing transaction to new db: {}".format(genTrans))
@@ -662,12 +662,15 @@ if __name__ == '__main__':
     parser.add_argument('--logfile', default=None, help='Log file')
     parser.add_argument('--dbfile', default='chess.dat', help='Input database (only format accepted .dat)')
     # parser.add_argument('--minsup', default=75, help='Minimum support threshold')
-    parser.add_argument('--lda_passes', default=200, help='Nr of passes over input data for lda parameter estimation')
-    parser.add_argument('--iim_passes', default=500, help='Nr of iterations over input data for iim parameter estimation')
-    parser.add_argument('--igm_minsup', default=75, help='positive: percentage of transactions, negative: exact number of transactions e.g. 50 or -50')
+
     parser.add_argument('--krimp_minsup', default=2397, help='<integer>--Absolute minsup (e.g. 10, 42, 512)')
     parser.add_argument('--krimp_type', default='all', help='Candidate type determined by [ all | cls | closed ]')
     parser.add_argument('--krimp_CTfilename', default=None, help='CT name file')
+
+    parser.add_argument('--igm_minsup', default=75, help='positive: percentage of transactions, negative: exact number of transactions e.g. 50 or -50')
+    parser.add_argument('--lda_passes', default=200, help='Nr of passes over input data for lda parameter estimation')
+    parser.add_argument('--iim_passes', default=500, help='Nr of iterations over input data for iim parameter estimation')
+
     args = parser.parse_args()
     args.dbname = os.path.basename(args.dbfile)
     # logging setup
