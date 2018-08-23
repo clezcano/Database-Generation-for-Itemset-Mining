@@ -223,7 +223,7 @@ class KrimpGen:
     def saveKrimpModeltoFile(self):
         with open(self.modelFileName, 'w') as modelFile:
             for (itemset, p) in self.krimpModel:
-                modelFile.write(" ".join(itemset) + "\n")
+                modelFile.write(" ".join(map(str, itemset)) + "\n")
                 modelFile.write(str(p) + "\n")
             logging.info("wrote Krimp model file to {}".format(self.modelFileName))
 
@@ -578,7 +578,7 @@ class IIMLearnGen:
             self.loadfromFile()
         else:
             logging.info("running IIM inference on corpus; passes = {}".format(npasses))
-            cmd = ["java", "-cp", os.path.join(os.getcwd(), "exe", "itemset-mining-1.0.jar"), "itemsetmining.main.ItemsetMining", "-i", str(npasses), "-f", self.origDBfilePath, "-v"]
+            cmd = ["java", "-Xmx10g", "-cp", os.path.join(os.getcwd(), "exe", "itemset-mining-1.0.jar"), "itemsetmining.main.ItemsetMining", "-i", str(npasses), "-f", self.origDBfilePath, "-v"]
             fd, temp_path = tempfile.mkstemp()
             with open(temp_path, 'w') as tmpout:
                 logging.info("running: {}".format(" ".join(cmd)))
@@ -602,6 +602,7 @@ class IIMLearnGen:
         with open(self.GenDBfilePath, 'w') as outf:
             ntrans = 0
             oriDBsize = len(self.originalDB)
+            logging.info("total records for generating: {}".format(oriDBsize))
             for i in range(oriDBsize):
                 newTrans = set()
                 for (itemset, p) in self.iimsModel:
@@ -649,7 +650,7 @@ class IIMLearnGen:
         """ saves state to model file """
         with open(self.modelFilePath, 'w') as outf:
             for (itemset, p) in self.iimsModel:
-                outf.write(" ".join(itemset) + "\n")
+                outf.write(" ".join(map(str,itemset)) + "\n")
                 outf.write(str(p) + "\n")
         logging.info("wrote IIM model file to {}".format(self.modelFilePath))
 
@@ -660,7 +661,7 @@ if __name__ == '__main__':
     # arguments setup
     parser = argparse.ArgumentParser()
     parser.add_argument('--logfile', default=None, help='Log file')
-    parser.add_argument('--dbfile', default='dataset246.dat', help='Input database (only format accepted .dat)')
+    parser.add_argument('--dbfile', default='dataset4141.dat', help='Input database (only format accepted .dat)')
     parser.add_argument('--minsup', default=75, help='Minimum support threshold')
 
     parser.add_argument('--krimp_minsup', default=2397, help='<integer>--Absolute minsup (e.g. 10, 42, 512)')
@@ -669,7 +670,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--igm_minsup', default=75, help='positive: percentage of transactions, negative: exact number of transactions e.g. 50 or -50')
     parser.add_argument('--lda_passes', default=200, help='Nr of passes over input data for lda parameter estimation')
-    parser.add_argument('--iim_passes', default=500, help='Nr of iterations over input data for iim parameter estimation')
+    parser.add_argument('--iim_passes', default=1, help='Nr of iterations over input data for iim parameter estimation')
 
     args = parser.parse_args()
     args.dbname = os.path.basename(args.dbfile)
@@ -680,7 +681,7 @@ if __name__ == '__main__':
         logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 
     # for reproducibility
-    # np.random.seed(50)
+    np.random.seed(50)
 
     # IGM generator model (igm)
     # igm = IGMGen(args.dbfile)
@@ -708,6 +709,6 @@ if __name__ == '__main__':
     iim = IIMLearnGen(args.dbfile)
     iim.learn(args.iim_passes)
     iim.gen()
-    eclatLDA(iim.GenDBfilePath, args.minsup)
+    # eclatLDA(iim.GenDBfilePath, args.minsup)
 
 
