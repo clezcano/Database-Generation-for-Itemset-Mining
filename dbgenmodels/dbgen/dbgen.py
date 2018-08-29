@@ -23,9 +23,9 @@ from subprocess import call
 import re
 import os
 import warnings
-# warnings.filterwarnings(action='ignore', category=UserWarning, module='gensim')
-# import gensim
-# from gensim import corpora
+warnings.filterwarnings(action='ignore', category=UserWarning, module='gensim')
+import gensim
+from gensim import corpora
 
 __author__ = 'marias'
 
@@ -71,7 +71,7 @@ def eclatLDA(infname, minsup):
     """
     bname = os.path.splitext(os.path.basename(infname))[0]
     infnamePath = os.path.join(os.getcwd(), "db", infname)
-    outfnamePath = os.path.join(os.getcwd(),"out", "eclat-{}-{}.itemsets".format(bname, minsup))
+    outfnamePath = os.path.join(os.getcwd(),"out", "eclat-lda-{}-{}.itemsets".format(bname, minsup))
     cmd = [os.path.join(os.getcwd(), "exe", "eclat.exe"), '-f" "', "-s{}".format(minsup), '-k" "', "-Z", infnamePath, outfnamePath]  # -Z prints number of items per size
     fd, temp_path = tempfile.mkstemp()
     with open(temp_path, 'w') as tmpout:
@@ -290,115 +290,6 @@ class KrimpGen:
 
 # --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-class LDALearnGen:
-    """
-    DB Generator module that uses Latent Dirichlet Allocation
-    """
-
-    def __init__(self, indb):
-        self.origDBfileName = indb
-        self.origDBbaseName = os.path.splitext(os.path.basename(indb))[0]
-        self.origDBfilePath = os.path.join(os.getcwd(), "dbgenmodels", "dbgen", "db", self.origDBfileName)  # Original DB file name e.g. chess.dat
-        self.GenDBfilePath = os.path.join(os.getcwd(), "dbgenmodels", "dbgen", "db", "gen-lda-{}".format(os.path.basename(self.origDBfileName)))  # Newly generated DB file name.
-        self.modelFilePath = None     # to be determined on learn execution, depends on parameters
-        self.K = None
-        self.npasses = None
-        self.lda = None             # model parameters
-        self.dictionary = None      # link between item descriptions and ids
-        # parse input file, figure out various statistics from dbfile
-        self.originalDB = []
-        self.itemAlphabet = set()
-        with open(self.origDBfilePath) as infile:
-            for row in infile:
-                transaction = sorted([int(item.strip()) for item in row.strip().split(" ")])
-                self.itemAlphabet |= set(transaction)
-                self.originalDB.append(transaction)
-        logging.info("Nr of transactions in {}: {}, Nr. of items: {}".format(self.origDBfileName, len(self.originalDB), len(self.itemAlphabet)))
-
-    @print_timing
-    def learn(self, K, npasses):
-        """
-        learns lda model from input db (as list of lists -- i.e. transaction itemsets)
-        parameters are
-            K: nr of topics;
-            npasses: nr of passes over db
-        output model is saved to file for persistent storage
-        """
-        # record parameter settings
-        self.K = K
-        self.npasses = npasses
-        # load db
-        self.dictionary = corpora.Dictionary(self.originalDB)
-        transaction_matrix = [self.dictionary.doc2bow(trans) for trans in self.originalDB]
-        logging.info("Size of transaction matrix: {}".format(len(transaction_matrix)))
-        self.modelFilePath = os.path.join(os.getcwd(), "dbgenmodels", "dbgen", "models", "lda_model_K{}_passes{}".format(K, npasses))
-        if os.path.exists(self.modelFilePath):
-            self.load()
-        else:
-            logging.info("running LDA inference on corpus; K = {}, passes = {}".format(K, npasses))
-            self.lda = gensim.models.ldamodel.LdaModel(transaction_matrix, num_topics=K, id2word=self.dictionary, passes=int(npasses), alpha='auto')
-            # save model to file for future reference
-            self.save()
-        for k in range(K):
-            logging.debug(self.lda.print_topic(k))
-
-    @print_timing
-    def gen(self):
-        """
-        from learned model, generate synthetic database using probabilistic model
-        returns new database file name
-        """
-        topics = self.lda.get_topics()
-        genDB = []
-        genDBsize = len(self.originalDB)    # use same size of original database
-        for i in range(genDBsize):
-            # use same length of transaction as original database
-            transSize = len(self.originalDB[i])
-            # use multinomial for transaction according to fitted lda model
-            mixture = self.lda[self.dictionary.doc2bow(self.originalDB[i])]
-            logging.debug("topic mixture for transaction {}: {}".format(i, mixture))
-            # chose topics accoring to multinomial mixture, for all words at once
-            trans_topics = np.random.multinomial(transSize, [x for _, x in mixture])
-            # now, generate words for each of the chosen topics
-            this_transaction = set()
-            for j, x in enumerate(trans_topics):
-                if x:
-                    items = np.random.multinomial(x, topics[j])
-                    logging.debug("generated words: {}".format(items))
-                    for l, w in enumerate(items):
-                        if w:
-                            # add word l w-times -- but since it is a set, we will loose words
-                            # also, may chose a word already put into the transaction so adding
-                            # it won't increase the current transaction
-                            logging.debug("--adding word id {} which is {}, {} times".format(l, self.dictionary[l], w))
-                            this_transaction.add(self.dictionary[l])
-            # add created transaction to new db
-            genDB.append(sorted(this_transaction))
-            logging.debug(">>original transaction size {}, generated transaction size {}".format(transSize, len(this_transaction)))
-            logging.debug(">>original transaction: {}, generated transaction: {}".format(sorted(self.originalDB[i]), sorted(this_transaction)))
-            # REPORT progress
-            if i and i % 1000 == 0:
-                logging.info("\tprocessed {} transactions of {} ({:0.1f}%).".format(i, genDBsize, 100.0*i/genDBsize))
-        # write result to file
-        outf = open(self.GenDBfilePath, "w")
-        for trans in genDB:
-            newitems = " ".join(sorted(trans))
-            outf.write(newitems + "\n")
-            logging.debug("writing transaction to new db: {}".format(newitems))
-        outf.close()
-        logging.info("wrote synthetic database to file {}".format(self.GenDBfilePath))
-        return self.GenDBfilePath
-
-    def load(self):
-        self.lda = gensim.models.LdaModel.load(self.modelFilePath)
-        logging.info("loaded persistent model from file {}".format(self.modelFilePath))
-
-    def save(self):
-        self.lda.save(self.modelFilePath)
-        logging.info("saved model in file '{}'".format(self.modelFilePath))
-
-# --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
 class IGMGen:
     """
        This DB Generator (IGM) is based on the model described in the paper
@@ -548,6 +439,120 @@ class IGMGen:
         return subsets[np.random.choice(len(subsets), p=[freq / sumfreq for freq in freqList])]
 
 # --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+class LDALearnGen:
+    """
+    DB Generator module that uses Latent Dirichlet Allocation
+    """
+
+    def __init__(self, indb):
+        self.origDBfileName = indb
+        self.origDBbaseName = os.path.splitext(os.path.basename(indb))[0]
+        self.origDBfilePath = os.path.join(os.getcwd(), "db", self.origDBfileName)  # Original DB file name e.g. chess.dat
+        self.GenDBfilePath = os.path.join(os.getcwd(), "db", "gen-lda-{}".format(os.path.basename(self.origDBfileName)))  # Newly generated DB file name.
+        self.modelFilePath = None  # to be determined on learn execution, depends on parameters
+        self.K = None
+        self.npasses = None
+        self.lda = None  # model parameters
+        self.dictionary = None  # link between item descriptions and ids
+        # parse input file, figure out various statistics from dbfile
+        self.originalDB = []
+        self.itemAlphabet = set()
+        with open(self.origDBfilePath) as infile:
+            for row in infile:
+                transaction = [item.strip() for item in row.strip().split(" ")]
+                self.itemAlphabet |= set(transaction)
+                self.originalDB.append(sorted(transaction))
+        logging.info("Nr of transactions in {}: {}, Nr. of items: {}".format(self.origDBfileName, len(self.originalDB),
+                                                                    len(self.itemAlphabet)))
+
+    @print_timing
+    def learn(self, K, npasses):
+        """
+        learns lda model from input db (as list of lists -- i.e. transaction itemsets)
+        parameters are
+            K: nr of topics;
+            npasses: nr of passes over db
+        output model is saved to file for persistent storage
+        """
+        # record parameter settings
+        self.K = K
+        self.npasses = npasses
+        # load db
+        self.dictionary = corpora.Dictionary(self.originalDB)
+        transaction_matrix = [self.dictionary.doc2bow(trans) for trans in self.originalDB]
+        logging.info("Size of transaction matrix: {}".format(len(transaction_matrix)))
+        self.modelFilePath = os.path.join(os.getcwd(), "models", "lda_model_K{}_passes{}".format(K, npasses))
+        if os.path.exists(self.modelFilePath):
+            self.load()
+        else:
+            logging.info("running LDA inference on corpus; K = {}, passes = {}".format(K, npasses))
+            self.lda = gensim.models.ldamodel.LdaModel(transaction_matrix, num_topics=K, id2word=self.dictionary,
+                                                       passes=int(npasses), alpha='auto')
+            # save model to file for future reference
+            self.save()
+        for k in range(K):
+            logging.debug(self.lda.print_topic(k))
+
+    @print_timing
+    def gen(self):
+        """
+        from learned model, generate synthetic database using probabilistic model
+        returns new database file name
+        """
+        topics = self.lda.get_topics()
+        genDB = []
+        genDBsize = len(self.originalDB)  # use same size of original database
+        for i in range(genDBsize):
+            # use same length of transaction as original database
+            transSize = len(self.originalDB[i])
+            # use multinomial for transaction according to fitted lda model
+            mixture = self.lda[self.dictionary.doc2bow(self.originalDB[i])]
+            logging.debug("topic mixture for transaction {}: {}".format(i, mixture))
+            # chose topics acording to multinomial mixture, for all words at once
+            trans_topics = np.random.multinomial(transSize, [x for _, x in mixture])
+            # now, generate words for each of the chosen topics
+            this_transaction = set()
+            for j, x in enumerate(trans_topics):
+                if x:
+                    items = np.random.multinomial(x, topics[j])
+                    logging.debug("generated words: {}".format(items))
+                    for l, w in enumerate(items):
+                        if w:
+                            # add word l w-times -- but since it is a set, we will loose words
+                            # also, may chose a word already put into the transaction so adding
+                            # it won't increase the current transaction
+                            logging.debug(
+                                "--adding word id {} which is {}, {} times".format(l, self.dictionary[l], w))
+                            this_transaction.add(self.dictionary[l])
+            # add created transaction to new db
+            genDB.append(sorted(this_transaction))
+            logging.debug(">>original transaction size {}, generated transaction size {}".format(transSize, len(
+                this_transaction)))
+            logging.debug(">>original transaction: {}, generated transaction: {}".format(sorted(self.originalDB[i]),
+                                                                                         sorted(this_transaction)))
+            # REPORT progress
+            if i and i % 1000 == 0:
+                logging.info(
+                    "\tprocessed {} transactions of {} ({:0.1f}%).".format(i, genDBsize, 100.0 * i / genDBsize))
+        # write result to file
+        outf = open(self.GenDBfilePath, "w")
+        for trans in genDB:
+            newitems = " ".join(map(str, sorted(map(int, trans))))
+            outf.write(newitems + "\n")
+            logging.debug("writing transaction to new db: {}".format(newitems))
+        outf.close()
+        logging.info("wrote synthetic database to file {}".format(self.GenDBfilePath))
+        return self.GenDBfilePath
+
+    def load(self):
+        self.lda = gensim.models.LdaModel.load(self.modelFilePath)
+        logging.info("loaded persistent model from file {}".format(self.modelFilePath))
+
+    def save(self):
+        self.lda.save(self.modelFilePath)
+        logging.info("saved model in file '{}'".format(self.modelFilePath))
+
+# --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 class IIMLearnGen:
     """
@@ -661,7 +666,7 @@ if __name__ == '__main__':
     # arguments setup
     parser = argparse.ArgumentParser()
     parser.add_argument('--logfile', default=None, help='Log file')
-    parser.add_argument('--dbfile', default='dataset4141.dat', help='Input database (only format accepted .dat)')
+    parser.add_argument('--dbfile', default='dataset377.dat', help='Input database (only format accepted .dat)')
     parser.add_argument('--minsup', default=75, help='Minimum support threshold')
 
     parser.add_argument('--krimp_minsup', default=2397, help='<integer>--Absolute minsup (e.g. 10, 42, 512)')
@@ -669,7 +674,8 @@ if __name__ == '__main__':
     parser.add_argument('--krimp_CTfilename', default=None, help='CT name file')
 
     parser.add_argument('--igm_minsup', default=75, help='positive: percentage of transactions, negative: exact number of transactions e.g. 50 or -50')
-    parser.add_argument('--lda_passes', default=200, help='Nr of passes over input data for lda parameter estimation')
+    parser.add_argument('--lda_minsup', default=50, help='Nr of passes over input data for lda parameter estimation')
+    parser.add_argument('--lda_passes', default=2, help='Nr of passes over input data for lda parameter estimation')
     parser.add_argument('--iim_passes', default=1, help='Nr of iterations over input data for iim parameter estimation')
 
     args = parser.parse_args()
@@ -697,18 +703,18 @@ if __name__ == '__main__':
     # eclatLDA(krimp.GenDBfilePath, args.krimp_minsup)
 
     # first, run eclat on original file to do comparisons
-    # K = eclatLDA(args.dbfile)
-    # logging.info("Nr of frequent itemsets found is: '{}' (future K for lda generator)".format(K))
+    K = eclatLDA(args.dbfile, args.lda_minsup)
+    logging.info("Nr of frequent itemsets found is: '{}' (future K for lda generator)".format(K))
     # now, run first generator model (lda) and then eclat on synthetic db
-    # lda = LDALearnGen(args.dbfile)
-    # lda.learn(K, args.lda_passes)
-    # lda.gen()
+    lda = LDALearnGen(args.dbfile)
+    lda.learn(K, args.lda_passes)
+    lda.gen()
     # eclatLDA(lda.newdbfile)
 
-    # run iim generator model (iim)
-    iim = IIMLearnGen(args.dbfile)
-    iim.learn(args.iim_passes)
-    iim.gen()
-    # eclatLDA(iim.GenDBfilePath, args.minsup)
+    # # run iim generator model (iim)
+    # iim = IIMLearnGen(args.dbfile)
+    # iim.learn(args.iim_passes)
+    # iim.gen()
+    # # eclatLDA(iim.GenDBfilePath, args.minsup)
 
 
