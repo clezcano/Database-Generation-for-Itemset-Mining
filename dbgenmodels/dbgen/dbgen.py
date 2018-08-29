@@ -307,7 +307,7 @@ class IGMGen:
         self.itemAlphabet = set()  # This is used to know the number of different items in original DB. It saves the item's alphabet.
         with open(self.origDBfilePath) as infile:
             for row in infile:
-                transaction = [item.strip() for item in row.strip().split(" ")]  # transaction = [item.strip().replace(" ", "_") for item in row.strip().split(',')]
+                transaction = [int(item.strip()) for item in row.strip().split(" ")]  # transaction = [item.strip().replace(" ", "_") for item in row.strip().split(',')]
                 self.itemAlphabet |= set(transaction)
                 self.originalDB.append(sorted(transaction))
             logging.info("Nr of transactions in {}: {}, Nr. of items: {}".format(self.origDBfileName, len(self.originalDB), len(self.itemAlphabet)))
@@ -318,7 +318,7 @@ class IGMGen:
         if os.path.exists(self.modelFileName):
             self.loadIgmModelFromFile()
         else:
-            logging.info("running IGM inference; minsup = {} on file: {}".format(args.igm_minsup, self.origDBfileName))
+            logging.info("running IGM inference; minsup = {} on file: {}".format(minsup, self.origDBfileName))
             fi = self.getFI(minsup)  # get the frequent itemsets of the original DB. (e.g. using eclat) Format: [(itemset, prob),...]
             self.igmModel = self.filterFI(fi)  # Select the set of interesting itemsets following the concept proposed by Laxman et.al.
             self.saveIgmModeltoFile()
@@ -328,16 +328,15 @@ class IGMGen:
     def gen(self):
         with open(self.GenDBfilePath, 'w') as genFile:
             ntrans = 0
-            # for i in range(len(self.originalDB)):
-            for i in range(5):
+            for i in range(len(self.originalDB)):
                 newTransaction = []
                 itemsetIndex = self.chooseItemset()
-                logging.info("itemset index selected : {} for transaction  {}".format(itemsetIndex, i))
+                logging.info("itemset index selected : {} for transaction {}".format(itemsetIndex, i))
                 pattern = self.choosePattern(itemsetIndex)
                 logging.info("pattern selected : {} for transaction  {}".format(pattern, i))
                 noise = self.chooseNoise(itemsetIndex)
                 logging.info("noise selected : {} for transaction  {}".format(noise, i))
-                newTransaction = pattern + noise  # both parameters should be sets.
+                newTransaction = pattern + noise
                 newTrans = " ".join(map(str,sorted(newTransaction)))
                 (itemset, p) = self.igmModel[itemsetIndex]
                 logging.info("===> generating transaction nr: {}; freq. itemset selected: {}; pattern selected: {}; noise pattern selected: {}".format(i, itemset, pattern, noise))
@@ -673,8 +672,9 @@ if __name__ == '__main__':
     parser.add_argument('--krimp_type', default='all', help='Candidate type determined by [ all | cls | closed ]')
     parser.add_argument('--krimp_CTfilename', default=None, help='CT name file')
 
-    parser.add_argument('--igm_minsup', default=75, help='positive: percentage of transactions, negative: exact number of transactions e.g. 50 or -50')
+    parser.add_argument('--igm_minsup', default=50, help='positive: percentage of transactions, negative: exact number of transactions e.g. 50 or -50')
     parser.add_argument('--lda_minsup', default=50, help='Nr of passes over input data for lda parameter estimation')
+
     parser.add_argument('--lda_passes', default=2, help='Nr of passes over input data for lda parameter estimation')
     parser.add_argument('--iim_passes', default=1, help='Nr of iterations over input data for iim parameter estimation')
 
@@ -690,25 +690,18 @@ if __name__ == '__main__':
     np.random.seed(50)
 
     # IGM generator model (igm)
-    # igm = IGMGen(args.dbfile)
-    # igm.learn(args.igm_minsup)
-    # igm.gen()
+    igm = IGMGen(args.dbfile)
+    igm.learn(args.igm_minsup)
+    igm.gen()
     # eclatLDA(igm.GenDBfilePath, args.igm_minsup)
 
-    # Krimp generator model (krimp)
-    # krimp = KrimpGen(args.dbfile)
-    # krimp.getCT()
-    # krimp.learn(args.krimp_minsup)
-    # krimp.gen()
-    # eclatLDA(krimp.GenDBfilePath, args.krimp_minsup)
-
-    # first, run eclat on original file to do comparisons
-    K = eclatLDA(args.dbfile, args.lda_minsup)
-    logging.info("Nr of frequent itemsets found is: '{}' (future K for lda generator)".format(K))
-    # now, run first generator model (lda) and then eclat on synthetic db
-    lda = LDALearnGen(args.dbfile)
-    lda.learn(K, args.lda_passes)
-    lda.gen()
+    # # first, run eclat on original file to do comparisons
+    # K = eclatLDA(args.dbfile, args.lda_minsup)
+    # logging.info("Nr of frequent itemsets found is: '{}' (future K for lda generator)".format(K))
+    # # now, run first generator model (lda) and then eclat on synthetic db
+    # lda = LDALearnGen(args.dbfile)
+    # lda.learn(K, args.lda_passes)
+    # lda.gen()
     # eclatLDA(lda.newdbfile)
 
     # # run iim generator model (iim)
@@ -717,4 +710,9 @@ if __name__ == '__main__':
     # iim.gen()
     # # eclatLDA(iim.GenDBfilePath, args.minsup)
 
-
+    # Krimp generator model (krimp)
+    # krimp = KrimpGen(args.dbfile)
+    # krimp.getCT()
+    # krimp.learn(args.krimp_minsup)
+    # krimp.gen()
+    # eclatLDA(krimp.GenDBfilePath, args.krimp_minsup)
